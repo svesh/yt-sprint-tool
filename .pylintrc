@@ -1,0 +1,11 @@
+[MASTER]
+load-plugins = pylint.extensions.mccabe
+
+[MESSAGES CONTROL]
+disable = duplicate-code
+
+[DESIGN]
+max-complexity = 10
+
+[FORMAT]
+max-line-length = 150
