@@ -1,0 +1,33 @@
+# GitHub Generated Files Configuration
+# This file helps GitHub identify AI-generated or machine-generated content
+
+version: 1
+
+# Files that are partially or fully AI-generated
+ai_generated:
+  - "lib_yt_api.py"
+  - "test_yt_api.py" 
+  - "lib_date_utils.py"
+  - "Dockerfile.debian"
+  - "Dockerfile.windows"
+  - "build-separate.sh"
+  - ".pre-commit-config.yaml"
+  - ".pylintrc"
+  - ".flake8"
+  - ".dockerignore"
+  - "test_version.py"
+  - "version.py"
+
+# Documentation that mentions AI collaboration
+documentation:
+  - "README.md"
+  - "CHANGELOG.md"
+
+# Collaboration model
+collaboration_type: "human-ai"
+ai_tools:
+  - "Claude 4 Sonnet"
+  - "GitHub Copilot"
+
+# Human oversight and validation
+human_verified: true

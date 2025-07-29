@@ -1,7 +1,12 @@
 # YT Sprint Tool
 
+> **⚠️ AI-Generated Content Notice**  
+> This project and all its content (code, documentation, tests, build scripts) were fully generated using artificial intelligence tools (Claude 4 Sonnet). The project demonstrates modern AI-assisted development capabilities and serves as an example of human-AI collaboration in software engineering.
+
 [![GitHub Repository](https://img.shields.io/badge/GitHub-Repository-blue?logo=github)](https://github.com/svesh/yt-sprint-tool/)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+[![AI Assisted](https://img.shields.io/badge/AI-Assisted-purple?logo=openai)](https://github.com/svesh/yt-sprint-tool/)
+[![Generated with Claude](https://img.shields.io/badge/Generated%20with-Claude%204%20Sonnet-orange?logo=anthropic)](https://github.com/svesh/yt-sprint-tool/)
 
 Set of utilities for automating sprint management in YouTrack.
 
@@ -154,7 +159,7 @@ pylint lib_date_utils.py lib_yt_api.py default_sprint.py make_sprint.py test_yt_
 
 ### 🤖 AI Co-author
 
-**GitHub Copilot (Claude 3.5 Sonnet)** - code generation, architecture creation, test writing, documentation, CI/CD setup, optimization and refactoring
+**GitHub Copilot (Claude 4 Sonnet)** - code generation, architecture creation, test writing, documentation, CI/CD setup, optimization and refactoring
 
 ### 🤝 Collaborative Development
 

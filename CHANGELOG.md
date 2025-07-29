@@ -41,7 +41,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### 🤖 Development Credits
 
 - **Primary Author**: Sergei Sveshnikov ([svesh87@gmail.com](mailto:svesh87@gmail.com))
-- **AI Assistant**: GitHub Copilot (Claude 3.5 Sonnet) - Extensive code generation, architecture design, testing, and documentation
+- **AI Assistant**: GitHub Copilot (Claude 4 Sonnet) - Extensive code generation, architecture design, testing, and documentation
 - **Build System**: Docker + Wine + PyInstaller + staticx integration
 - **Quality Assurance**: Automated testing and linting pipeline
 - **Project Repository**: [https://github.com/svesh/yt-sprint-tool/](https://github.com/svesh/yt-sprint-tool/)
