@@ -1,3 +1,5 @@
+-e .
+
 requests>=2.28.0
 pyinstaller==6.14.2
 # staticx==0.14.1  # Linux only - installed separately in Dockerfile.linux
@@ -15,3 +17,11 @@ pytest-cov==6.0.0
 pytest-mock==3.14.1
 freezegun==1.5.1
 requests-mock==1.12.1
+
+# Daemon & Prometheus (used only with --daemon)
+apscheduler>=3.10.4
+prometheus_client>=0.20.0
+
+# Daemon and metrics (used by default-sprint --daemon)
+apscheduler>=3.10.4
+prometheus_client>=0.20.0

@@ -18,7 +18,8 @@ You should have received a copy of the GNU General Public License
 along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 Usage:
-    default_sprint.py "Board Name" "Project Name" [--field "Field Name"] [--week 2025.32]
+    default_sprint.py "Board Name" "Project Name" [--field "Field Name"] [--week 2025.32] [--forward N]
+    default_sprint.py "Board Name" "Project Name" --daemon --cron "0 8 * * 1" [--metrics-addr 0.0.0.0] [--metrics-port 9108]
 
 Simplified version using methods from lib_yt_api and lib_date_utils libraries.
 """
@@ -27,20 +28,62 @@ import argparse
 import logging
 import os
 import sys
-from typing import Tuple
 
-from ytsprint.lib_date_utils import DateUtils
+from ytsprint.lib_daemon import DaemonRunner
+from ytsprint.lib_sprint import SprintService
 from ytsprint.lib_yt_api import YouTrackAPI
 from ytsprint.version import get_version_for_argparse
 
+logger = logging.getLogger(__name__)
+
 
 def parse_args() -> argparse.Namespace:
-    """Command line argument parsing."""
+    """
+    Parse command line arguments for default-sprint CLI.
+
+    Args:
+        None
+
+    Returns:
+        argparse.Namespace: Parsed arguments including board, project, field,
+        week, forward count, daemon flags (cron, metrics-addr, metrics-port),
+        and YouTrack connection details (url, token).
+    """
     parser = argparse.ArgumentParser(description="Sprint synchronization between board and project")
     parser.add_argument("board", help="Board name")
     parser.add_argument("project", help="Project name")
     parser.add_argument("--field", default="Sprints", help="Field name (default: Sprints)")
     parser.add_argument("--week", help="Week in YYYY.WW format (default - current)")
+    parser.add_argument(
+        "--forward",
+        type=int,
+        default=0,
+        help=(
+            "How many future sprints to ensure exist (default: 0). "
+            "Always switches project default to the actual sprint."
+        ),
+    )
+    parser.add_argument(
+        "--daemon",
+        action="store_true",
+        help="Run as a daemon with cron schedule (UTC)",
+    )
+    parser.add_argument(
+        "--cron",
+        default="0 8 * * 1",
+        help="Crontab string for daemon schedule (UTC). Default: '0 8 * * 1'",
+    )
+    parser.add_argument(
+        "--metrics-addr",
+        default="0.0.0.0",
+        help="Prometheus exporter address (default: 0.0.0.0)",
+    )
+    parser.add_argument(
+        "--metrics-port",
+        type=int,
+        default=9108,
+        help="Prometheus exporter port (default: 9108)",
+    )
     parser.add_argument(
         "--url", default=os.environ.get("YOUTRACK_URL"), help="YouTrack URL (or env YOUTRACK_URL)"
     )
@@ -53,127 +96,72 @@ def parse_args() -> argparse.Namespace:
         version=get_version_for_argparse("default-sprint"),
         help="Show version and exit",
     )
+    parser.add_argument(
+        "--log-level",
+        dest="log_level",
+        default=os.environ.get("YTSPRINT_LOG_LEVEL", "INFO"),
+        help=(
+            "Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL). "
+            "If omitted, uses env YTSPRINT_LOG_LEVEL; default INFO."
+        ),
+    )
     return parser.parse_args()
 
 
-def setup_sprint(yt: YouTrackAPI, board_name: str, sprint_name: str, start_ms: int, finish_ms: int) -> None:
-    """Setting up sprint on board."""
-    # Search for board
-    board_id = yt.find_board_id(board_name)
-    if not board_id:
-        print(f"❌ Board '{board_name}' not found")
-        sys.exit(1)
-    print(f"✅ BOARD_ID = {board_id}")
+def _start_daemon(yt: YouTrackAPI, args: argparse.Namespace) -> None:
+    """
+    Start daemon using DaemonRunner with a job that performs a single sync.
 
-    # Create/find sprint on board
-    sprint_id = yt.find_sprint_id(board_id, sprint_name)
-    if not sprint_id:
-        print(f"🔨 Creating sprint '{sprint_name}'")
-        sprint_data = {"name": sprint_name, "start_ms": start_ms, "finish_ms": finish_ms}
-        sprint = yt.create_sprint(board_id, sprint_data)
-        sprint_id = sprint.get("id")
-    else:
-        print(f"✅ Sprint '{sprint_name}' already exists")
-    print(f"✅ SPRINT_ID = {sprint_id}")
+    Builds a closure that invokes SprintService.run_sync_once with parameters
+    from CLI, then runs it on the configured cron schedule in UTC.
 
+    Args:
+        yt (YouTrackAPI): Initialized API client.
+        args (argparse.Namespace): Parsed CLI arguments (board, project, field,
+            week, forward, cron, metrics-addr, metrics-port).
 
-def setup_project_field(yt: YouTrackAPI, project_name: str, field_name: str, sprint_name: str) -> Tuple[str, str]:
-    """Setting up project field."""
-    print(f"🎯 Setting default value for field '{field_name}': {sprint_name}")
-
-    # Search for project
-    project_id = yt.find_project_id(project_name)
-    if not project_id:
-        print(f"❌ Project '{project_name}' not found")
-        sys.exit(1)
-    print(f"✅ PROJECT_ID = {project_id}")
-
-    # Get project fields with bundle values
-    fields = yt.get_project_fields(project_id)
-
-    # Search for needed field
-    project_field = None
-    for field_data in fields:
-        field = field_data.get("field", {})
-        if field.get("name") == field_name:
-            project_field = field_data
-            break
-
-    if not project_field:
-        print(f"❌ Field '{field_name}' not found in project '{project_name}'")
-        sys.exit(1)
-
-    project_field_id = project_field["id"]
-    bundle = project_field.get("bundle", {})
-    values = bundle.get("values", [])
-
-    print(f"✅ PROJECT_FIELD_ID = {project_field_id}")
-
-    # Search for value in bundle by sprint name
-    value_id = yt.find_bundle_value_by_name(values, sprint_name)
-    if not value_id:
-        print(
-            f"❌ Value '{sprint_name}' not found in bundle for field '{field_name}' in project '{project_name}'"
-        )
-        sys.exit(1)
-    print(f"✅ Bundle value matched: {sprint_name} -> {value_id}")
-
-    # Update default values
-    print("🎯 Updating default values")
-    yt.update_field_default_values(project_id, project_field_id, [value_id])
-
-    return project_id, project_field_id
-
-
-def verify_setup(yt: YouTrackAPI, project_id: str, field_id: str) -> None:
-    """Verify final setup."""
-    print("🔍 Verifying final setup...")
-    result = yt.get_field_defaults(project_id, field_id)
-    field_name = result.get("field", {}).get("name", "N/A")
-    defaults = result.get("defaultValues", [])
-
-    print(f"✅ Field: {field_name}")
-    if defaults:
-        for default in defaults:
-            print(f"✅ Default value: {default.get('name')} (id: {default.get('id')})")
-    else:
-        print("⚠️ No default values")
+    Returns:
+        None
+    """
+    def _job() -> None:
+        SprintService(yt).run_sync_once(args.board, args.project, args.field, args.week, args.forward)
+    DaemonRunner(str(args.cron), str(args.metrics_addr), int(args.metrics_port)).start(_job)
 
 
 def main() -> None:
-    """Main function."""
-    # Enable informative logging by default
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+    """
+    Entry point for default-sprint CLI.
 
+    - Validates YouTrack URL and token
+    - In single-run mode executes SprintService.run_sync_once
+    - In daemon mode schedules the sync job via DaemonRunner
+
+    Args:
+        None
+
+    Returns:
+        None
+    """
     args = parse_args()
+    # Configure logging with CLI/env-provided level
+    level = getattr(logging, str(args.log_level).upper(), logging.INFO)
+    logging.basicConfig(level=level, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 
     if not args.url or not args.token:
-        print(
-            "❌ Specify --url and --token or environment variables YOUTRACK_URL / YOUTRACK_TOKEN",
-            file=sys.stderr,
+        logger.error(
+            "❌ Specify --url and --token or environment variables YOUTRACK_URL / YOUTRACK_TOKEN"
         )
         sys.exit(1)
 
     # API initialization
     yt = YouTrackAPI(args.url, args.token)
 
-    # Process week parameter
-    result = DateUtils.process_week_parameter(args.week)
-    year, week, sprint_name, monday, friday, start_ms, finish_ms = result
+    if args.daemon:
+        _start_daemon(yt, args)
+        return
 
-    print(f"📅 Week: {year}.{week:02d} ({monday} - {friday})")
-    print(f"🏃 Sprint: {sprint_name}")
-
-    # Sprint setup
-    setup_sprint(yt, args.board, sprint_name, start_ms, finish_ms)
-
-    # Project field setup
-    project_id, field_id = setup_project_field(yt, args.project, args.field, sprint_name)
-
-    # Verification
-    verify_setup(yt, project_id, field_id)
-
-    print("🎉 Synchronization completed!")
+    SprintService(yt).run_sync_once(args.board, args.project, args.field, args.week, args.forward)
+    logger.info("🎉 Synchronization completed!")
 
 
 if __name__ == "__main__":

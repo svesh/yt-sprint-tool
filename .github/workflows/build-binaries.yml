@@ -51,7 +51,7 @@ jobs:
 
       - name: pytest with coverage
         run: |
-          pytest -v --cov=calendar_parser --cov-fail-under=80
+          pytest -v --cov=ytsprint --cov-fail-under=80
 
       - name: helm lint (conditional)
         shell: bash

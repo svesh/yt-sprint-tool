@@ -77,6 +77,16 @@ default-sprint "My Board" "My Project" --field "Custom Field"
 
 # For specific week
 default-sprint "My Board" "My Project" --week "2025.32"
+
+# Ensure future sprints (create next N weeks)
+default-sprint "My Board" "My Project" --forward 2
+
+# Run as a daemon (UTC) every Monday 08:00, with Prometheus metrics
+default-sprint "My Board" "My Project" \
+  --daemon \
+  --cron "0 8 * * 1" \
+  --metrics-addr 0.0.0.0 \
+  --metrics-port 9108
 ```
 
 ## Parameters
@@ -90,6 +100,7 @@ default-sprint "My Board" "My Project" --week "2025.32"
 
 - `board` - Agile board name (positional argument)
 - `week` - Week in YYYY.WW format (optional positional argument)
+- `--log-level` - Logging level (`DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`). If omitted, uses env `YTSPRINT_LOG_LEVEL`; default `INFO`.
 
 ### default_sprint.py Parameters
 
@@ -97,6 +108,17 @@ default-sprint "My Board" "My Project" --week "2025.32"
 - `project` - Project name (positional argument)
 - `--field` - Project field name (default "Sprints")
 - `--week` - Week in YYYY.WW format (default - current)
+- `--forward` - How many future sprints to ensure exist (default: 0). Default value is always switched to the current sprint.
+- `--daemon` - Run as background daemon with cron schedule (UTC)
+- `--cron` - Crontab string for schedule (default: `0 8 * * 1`)
+- `--metrics-addr` - Prometheus exporter bind address (default: `0.0.0.0`)
+- `--metrics-port` - Prometheus exporter port (default: `9108`)
+- `--log-level` - Logging level (`DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`). If omitted, uses env `YTSPRINT_LOG_LEVEL`; default `INFO`.
+
+Prometheus metrics exposed at `http://<metrics-addr>:<metrics-port>/metrics`:
+
+- `ytsprint_cron_seconds`: seconds since last cron run (NaN until first run)
+- `ytsprint_cron_status`: last run status (`1` on success, `0` on failure)
 
 ## Development
 
@@ -150,12 +172,14 @@ bash scripts/macos-build.sh
 
 On macOS, see local Docker setup and notes in [OSX_BUILD.md](OSX_BUILD.md).
 
-### Package structure
+### Package Structure
 
-- `ytsprint/lib_date_utils.py` — utilities for working with dates and ISO weeks
-- `ytsprint/lib_yt_api.py` — YouTrack API client
-- `ytsprint/make_sprint.py` — CLI entry (make-sprint)
-- `ytsprint/default_sprint.py` — CLI entry (default-sprint)
+- `ytsprint/lib_date_utils.py` — utilities for ISO weeks
+- `ytsprint/lib_yt_api.py` — YouTrack REST API client
+- `ytsprint/lib_sprint.py` — sprint service (ensure/create, defaults, forward, one‑off sync)
+- `ytsprint/lib_daemon.py` — daemon runner (cron, Prometheus metrics)
+- `ytsprint/make_sprint.py` — CLI entry (make‑sprint)
+- `ytsprint/default_sprint.py` — CLI entry (default‑sprint)
 
 ### Using Binaries (from dist/)
 
