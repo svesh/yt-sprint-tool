@@ -25,15 +25,14 @@ URL and token can be passed via environment variables YOUTRACK_URL and YOUTRACK_
 """
 
 import argparse
+import logging
 import os
 import sys
 from typing import Optional
 
-from lib_date_utils import DateUtils
-
-from lib_yt_api import YouTrackAPI
-
-from version import get_version_for_argparse
+from ytsprint.lib_date_utils import DateUtils
+from ytsprint.lib_yt_api import YouTrackAPI
+from ytsprint.version import get_version_for_argparse
 
 
 def parse_args() -> argparse.Namespace:
@@ -41,13 +40,15 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Creating sprint in YouTrack")
     parser.add_argument("board", help="Board name")
     parser.add_argument("week", nargs="?", help="Week in YYYY.WW format (default - current)")
-    parser.add_argument("--url", default=os.environ.get("YOUTRACK_URL"),
-                        help="YouTrack URL (or env YOUTRACK_URL)")
-    parser.add_argument("--token", default=os.environ.get("YOUTRACK_TOKEN"),
-                        help="Bearer token (or env YOUTRACK_TOKEN)")
-    parser.add_argument("--version", action="version",
-                        version=get_version_for_argparse("make-sprint"),
-                        help="Show version and exit")
+    parser.add_argument(
+        "--url", default=os.environ.get("YOUTRACK_URL"), help="YouTrack URL (or env YOUTRACK_URL)"
+    )
+    parser.add_argument(
+        "--token", default=os.environ.get("YOUTRACK_TOKEN"), help="Bearer token (or env YOUTRACK_TOKEN)"
+    )
+    parser.add_argument(
+        "--version", action="version", version=get_version_for_argparse("make-sprint"), help="Show version and exit"
+    )
     return parser.parse_args()
 
 
@@ -72,11 +73,7 @@ def create_sprint(yt: YouTrackAPI, board_name: str, week_param: Optional[str]) -
         sys.exit(0)
 
     # Create sprint
-    sprint_data = {
-        "name": sprint_name,
-        "start_ms": start_ms,
-        "finish_ms": finish_ms
-    }
+    sprint_data = {"name": sprint_name, "start_ms": start_ms, "finish_ms": finish_ms}
     sprint = yt.create_sprint(board_id, sprint_data)
     print(f"✅ Created sprint: {sprint.get('name')} (ID: {sprint.get('id')})")
     print("🎉 Done!")
@@ -84,11 +81,16 @@ def create_sprint(yt: YouTrackAPI, board_name: str, week_param: Optional[str]) -
 
 def main() -> None:
     """Main function for creating sprint."""
+    # Enable informative logging by default
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+
     args = parse_args()
 
     if not args.url or not args.token:
-        print("❌ Specify --url and --token or environment variables YOUTRACK_URL / YOUTRACK_TOKEN",
-              file=sys.stderr)
+        print(
+            "❌ Specify --url and --token or environment variables YOUTRACK_URL / YOUTRACK_TOKEN",
+            file=sys.stderr,
+        )
         sys.exit(1)
 
     # Initialize API client

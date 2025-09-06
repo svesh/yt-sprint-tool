@@ -1,21 +1,20 @@
 # YT Sprint Tool
 
 > **⚠️ AI-Generated Content Notice**  
-> This project and all its content (code, documentation, tests, build scripts) were fully generated using artificial intelligence tools (Claude 4 Sonnet). The project demonstrates modern AI-assisted development capabilities and serves as an example of human-AI collaboration in software engineering.
+> This project and all its content (code, documentation, tests, build scripts) were fully generated using artificial intelligence tools. The project demonstrates modern AI-assisted development capabilities and serves as an example of human-AI collaboration in software engineering.
 
 [![GitHub Repository](https://img.shields.io/badge/GitHub-Repository-blue?logo=github)](https://github.com/svesh/yt-sprint-tool/)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![AI Assisted](https://img.shields.io/badge/AI-Assisted-purple?logo=openai)](https://github.com/svesh/yt-sprint-tool/)
-[![Generated with Claude](https://img.shields.io/badge/Generated%20with-Claude%204%20Sonnet-orange?logo=anthropic)](https://github.com/svesh/yt-sprint-tool/)
 
 Set of utilities for automating sprint management in YouTrack.
 
 ## Description
 
-The project contains two main utilities:
+The project contains two main CLI utilities:
 
-- **`make_sprint.py`** - creating sprints on YouTrack Agile board
-- **`default_sprint.py`** - synchronizing sprint values between board and project
+- `make-sprint` — creating sprints on YouTrack Agile board
+- `default-sprint` — synchronizing sprint values between board and project
 
 ## Installation and Setup
 
@@ -42,31 +41,31 @@ docker build -f Dockerfile.windows -t yt-sprint-tool:windows .
 
 ## Usage
 
-### make_sprint.py Utility
+### make-sprint Utility
 
 Create sprint for specified week on Agile board.
 
 ```bash
 # Create sprint for current week
-python make_sprint.py "My Board"
+make-sprint "My Board"
 
 # Create sprint for specific week
-python make_sprint.py "My Board" "2025.32"
+make-sprint "My Board" "2025.32"
 ```
 
-### default_sprint.py Utility
+### default-sprint Utility
 
 Synchronize sprint values between board and project.
 
 ```bash
 # Sync with default "Sprints" field
-python default_sprint.py "My Board" "My Project"
+default-sprint "My Board" "My Project"
 
 # Sync with custom field
-python default_sprint.py "My Board" "My Project" --field "Custom Field"
+default-sprint "My Board" "My Project" --field "Custom Field"
 
 # For specific week
-python default_sprint.py "My Board" "My Project" --week "2025.32"
+default-sprint "My Board" "My Project" --week "2025.32"
 ```
 
 ## Parameters
@@ -90,10 +89,12 @@ python default_sprint.py "My Board" "My Project" --week "2025.32"
 
 ## Architecture
 
-### Libraries
+### Package structure
 
-- **`lib_date_utils.py`** - utilities for working with dates and ISO weeks
-- **`lib_yt_api.py`** - YouTrack API client
+- `ytsprint/lib_date_utils.py` — utilities for working with dates and ISO weeks
+- `ytsprint/lib_yt_api.py` — YouTrack API client
+- `ytsprint/make_sprint.py` — CLI entry (make-sprint)
+- `ytsprint/default_sprint.py` — CLI entry (default-sprint)
 
 ### Testing
 
@@ -108,17 +109,36 @@ pylint lib_date_utils.py lib_yt_api.py default_sprint.py make_sprint.py test_yt_
 
 ## Building Standalone Binaries
 
-### Docker Build (recommended)
+### Docker Build (Linux + Windows)
 
 ```bash
-# Build binaries for Linux and Windows via Docker
-./build-separate.sh
+# Build binaries for Linux and Windows via Docker Buildx (export-stage)
+docker buildx build -f Dockerfile.debian --platform linux/amd64 --target export-stage --output type=local,dest=dist .
+docker buildx build -f Dockerfile.debian --platform linux/arm64 --target export-stage --output type=local,dest=dist .
+docker buildx build -f Dockerfile.windows --platform linux/amd64 --target export-stage --output type=local,dest=dist .
 ```
 
 **Build results in `./dist/` folder:**
 
 - 🐧 **Linux**: `make-sprint-linux`, `default-sprint-linux` (~11MB each)
 - 🪟 **Windows**: `make-sprint.exe`, `default-sprint.exe` (~10MB each)
+
+### macOS (Apple Silicon / Intel)
+
+Build requires a macOS host (cross-compilation with PyInstaller is not supported):
+
+```bash
+scripts/build-macos.sh
+```
+
+Artifacts:
+
+- 🍎 **macOS**: `make-sprint-macos-arm64` / `make-sprint-macos-x86_64`, `default-sprint-macos-arm64` / `default-sprint-macos-x86_64`
+
+Notes:
+
+- For universal (x86_64+arm64) builds use universal Python and two PyInstaller runs with `--target-arch`.
+- CI recommendation: matrix builds — Linux (Docker), Windows (Wine), macOS (native runner).
 
 ### Using Binaries
 
@@ -157,9 +177,10 @@ pylint lib_date_utils.py lib_yt_api.py default_sprint.py make_sprint.py test_yt_
 - Email: [svesh87@gmail.com](mailto:svesh87@gmail.com)
 - GitHub: [@svesh](https://github.com/svesh)
 
-### 🤖 AI Co-author
+### 🤖 AI Co-authors
 
-**GitHub Copilot (Claude 4 Sonnet)** - code generation, architecture creation, test writing, documentation, CI/CD setup, optimization and refactoring
+- v1.0.0 — **GitHub Copilot (Claude 4 Sonnet)**: initial scaffolding, early tests, documentation, and build system ideas
+- v2.0.0 — **OpenAI Codex CLI (AI assistant)**: package refactor, logging improvements, test relocation and coverage, CI workflows, build scripts, and documentation updates
 
 ### 🤝 Collaborative Development
 

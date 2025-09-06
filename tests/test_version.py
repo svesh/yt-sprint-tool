@@ -20,8 +20,16 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 import unittest
 
-from version import (AUTHOR, AUTHOR_EMAIL, LICENSE, PROJECT_NAME, PROJECT_URL, VERSION,
-                     generate_windows_version_info, get_version_for_argparse)
+from ytsprint.version import (
+    AUTHOR,
+    AUTHOR_EMAIL,
+    LICENSE,
+    PROJECT_NAME,
+    PROJECT_URL,
+    VERSION,
+    generate_windows_version_info,
+    get_version_for_argparse,
+)
 
 
 class TestVersionInfo(unittest.TestCase):
@@ -30,8 +38,7 @@ class TestVersionInfo(unittest.TestCase):
     def test_version_format(self):
         """Test version format (should be in X.Y.Z format)"""
         self.assertIsInstance(VERSION, str)
-        self.assertRegex(VERSION, r'^\d+\.\d+\.\d+$',
-                         f"Version {VERSION} should be in X.Y.Z format")
+        self.assertRegex(VERSION, r"^\d+\.\d+\.\d+$", f"Version {VERSION} should be in X.Y.Z format")
 
     def test_author_not_empty(self):
         """Test that author is specified"""
@@ -70,14 +77,12 @@ class TestVersionInfo(unittest.TestCase):
     def test_windows_version_info(self):
         """Test Windows version information generation"""
         win_info = generate_windows_version_info(
-            filename="test.exe",
-            description="Test Description",
-            product_name="Test Product"
+            filename="test.exe", description="Test Description", product_name="Test Product"
         )
 
         self.assertIsInstance(win_info, str)
         self.assertIn("VSVersionInfo", win_info)
-        self.assertIn(VERSION.replace('.', ','), win_info)  # Windows version format
+        self.assertIn(VERSION.replace(".", ","), win_info)  # Windows version format
         self.assertIn(AUTHOR, win_info)
         self.assertIn(AUTHOR_EMAIL, win_info)
         self.assertIn(PROJECT_URL, win_info)
@@ -90,8 +95,8 @@ class TestVersionInfo(unittest.TestCase):
         default_version = get_version_for_argparse("default-sprint")
 
         # Check that version is in single-line format
-        self.assertNotIn('\n', make_version)
-        self.assertNotIn('\n', default_version)
+        self.assertNotIn("\n", make_version)
+        self.assertNotIn("\n", default_version)
 
         # Check presence of key elements
         for version_str in [make_version, default_version]:
@@ -100,7 +105,7 @@ class TestVersionInfo(unittest.TestCase):
             self.assertIn(AUTHOR, version_str)
             self.assertIn(LICENSE, version_str)
             self.assertIn(PROJECT_URL, version_str)
-            self.assertIn('|', version_str)  # Separators
+            self.assertIn("|", version_str)  # Separators
 
     def test_version_contains_gpl_license(self):
         """Test that version output contains GPL-3.0 license"""

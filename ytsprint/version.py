@@ -45,12 +45,15 @@ def get_version_for_argparse(tool_name: str) -> str:
 
     descriptions = {
         "make-sprint": MAKE_SPRINT_DESCRIPTION,
-        "default-sprint": DEFAULT_SPRINT_DESCRIPTION
+        "default-sprint": DEFAULT_SPRINT_DESCRIPTION,
     }
 
     description = descriptions.get(tool_name, f"{PROJECT_NAME} - Tool")
 
-    return f"{PROJECT_NAME} {VERSION} | {description} | Author: {AUTHOR} | License: {LICENSE} | {PROJECT_URL} | © {COPYRIGHT_YEAR}"
+    return (
+        f"{PROJECT_NAME} {VERSION} | {description} | Author: {AUTHOR} | "
+        f"License: {LICENSE} | {PROJECT_URL} | © {COPYRIGHT_YEAR}"
+    )
 
 
 def generate_windows_version_info(filename, version=VERSION, description="", product_name=""):
@@ -111,13 +114,13 @@ def generate_windows_version_files():
     make_sprint_version = generate_windows_version_info(
         filename="make-sprint.exe",
         description=MAKE_SPRINT_DESCRIPTION,
-        product_name="YT Sprint Tool - Sprint Creator"
+        product_name="YT Sprint Tool - Sprint Creator",
     )
 
     default_sprint_version = generate_windows_version_info(
         filename="default-sprint.exe",
         description=DEFAULT_SPRINT_DESCRIPTION,
-        product_name="YT Sprint Tool - Sprint Sync"
+        product_name="YT Sprint Tool - Sprint Sync",
     )
 
     # Write files

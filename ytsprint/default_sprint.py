@@ -24,15 +24,14 @@ Simplified version using methods from lib_yt_api and lib_date_utils libraries.
 """
 
 import argparse
+import logging
 import os
 import sys
 from typing import Tuple
 
-from lib_date_utils import DateUtils
-
-from lib_yt_api import YouTrackAPI
-
-from version import get_version_for_argparse
+from ytsprint.lib_date_utils import DateUtils
+from ytsprint.lib_yt_api import YouTrackAPI
+from ytsprint.version import get_version_for_argparse
 
 
 def parse_args() -> argparse.Namespace:
@@ -42,13 +41,18 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("project", help="Project name")
     parser.add_argument("--field", default="Sprints", help="Field name (default: Sprints)")
     parser.add_argument("--week", help="Week in YYYY.WW format (default - current)")
-    parser.add_argument("--url", default=os.environ.get("YOUTRACK_URL"),
-                        help="YouTrack URL (or env YOUTRACK_URL)")
-    parser.add_argument("--token", default=os.environ.get("YOUTRACK_TOKEN"),
-                        help="Bearer token (or env YOUTRACK_TOKEN)")
-    parser.add_argument("--version", action="version",
-                        version=get_version_for_argparse("default-sprint"),
-                        help="Show version and exit")
+    parser.add_argument(
+        "--url", default=os.environ.get("YOUTRACK_URL"), help="YouTrack URL (or env YOUTRACK_URL)"
+    )
+    parser.add_argument(
+        "--token", default=os.environ.get("YOUTRACK_TOKEN"), help="Bearer token (or env YOUTRACK_TOKEN)"
+    )
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=get_version_for_argparse("default-sprint"),
+        help="Show version and exit",
+    )
     return parser.parse_args()
 
 
@@ -65,11 +69,7 @@ def setup_sprint(yt: YouTrackAPI, board_name: str, sprint_name: str, start_ms: i
     sprint_id = yt.find_sprint_id(board_id, sprint_name)
     if not sprint_id:
         print(f"🔨 Creating sprint '{sprint_name}'")
-        sprint_data = {
-            "name": sprint_name,
-            "start_ms": start_ms,
-            "finish_ms": finish_ms
-        }
+        sprint_data = {"name": sprint_name, "start_ms": start_ms, "finish_ms": finish_ms}
         sprint = yt.create_sprint(board_id, sprint_data)
         sprint_id = sprint.get("id")
     else:
@@ -112,7 +112,9 @@ def setup_project_field(yt: YouTrackAPI, project_name: str, field_name: str, spr
     # Search for value in bundle by sprint name
     value_id = yt.find_bundle_value_by_name(values, sprint_name)
     if not value_id:
-        print(f"❌ Value '{sprint_name}' not found in bundle for field '{field_name}' in project '{project_name}'")
+        print(
+            f"❌ Value '{sprint_name}' not found in bundle for field '{field_name}' in project '{project_name}'"
+        )
         sys.exit(1)
     print(f"✅ Bundle value matched: {sprint_name} -> {value_id}")
 
@@ -140,11 +142,16 @@ def verify_setup(yt: YouTrackAPI, project_id: str, field_id: str) -> None:
 
 def main() -> None:
     """Main function."""
+    # Enable informative logging by default
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+
     args = parse_args()
 
     if not args.url or not args.token:
-        print("❌ Specify --url and --token or environment variables YOUTRACK_URL / YOUTRACK_TOKEN",
-              file=sys.stderr)
+        print(
+            "❌ Specify --url and --token or environment variables YOUTRACK_URL / YOUTRACK_TOKEN",
+            file=sys.stderr,
+        )
         sys.exit(1)
 
     # API initialization

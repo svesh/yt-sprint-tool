@@ -8,34 +8,25 @@ FROM tobix/pywine:3.12
 WORKDIR /wine/drive_c/temp
 COPY requirements.txt .
 
-# Update pip and install dependencies
+# Update pip and install dependencies (Windows Python is already in the image)
 RUN wine python -m pip install --upgrade pip
 RUN wine python -m pip install -r requirements.txt
 
 # Copy source code
-COPY lib_date_utils.py .
-COPY lib_yt_api.py .
-COPY version.py .
-COPY make_sprint.py .
-COPY default_sprint.py .
+COPY ytsprint ./ytsprint
 
 # Generate version info files for Windows .exe
-RUN wine python version.py
+RUN wine python ytsprint/version.py
 
 # Build Windows binaries (.exe) with version information
-RUN wine python -m PyInstaller --onefile --name make-sprint.exe \
+RUN wine python -m pip install pyinstaller
+RUN wine python -m PyInstaller --onefile --name make-sprint \
         --version-file make_sprint_version.py \
-        --add-data "lib_date_utils.py;." \
-        --add-data "lib_yt_api.py;." \
-        --add-data "version.py;." \
-        make_sprint.py
+        ytsprint/make_sprint.py
 
-RUN wine python -m PyInstaller --onefile --name default-sprint.exe \
+RUN wine python -m PyInstaller --onefile --name default-sprint \
         --version-file default_sprint_version.py \
-        --add-data "lib_date_utils.py;." \
-        --add-data "lib_yt_api.py;." \
-        --add-data "version.py;." \
-        default_sprint.py
+        ytsprint/default_sprint.py
 
 # Create final stage for output artifacts
 FROM scratch AS export-stage

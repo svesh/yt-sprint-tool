@@ -1,0 +1,72 @@
+[tool.isort]
+profile = "black"
+known_first_party = ["ytsprint"]
+
+[tool.pylint.MAIN]
+load-plugins = ["pylint.extensions.mccabe"]
+init-hook = "import sys, os; sys.path.insert(0, os.path.abspath('.'))"
+recursive = true
+ignore = [".venv", "__pycache__"]
+
+[tool.pylint."MESSAGES CONTROL"]
+disable = ["duplicate-code", "broad-exception-caught"]
+
+[tool.pylint.DESIGN]
+max-complexity = 10
+max-args = 10
+max-positional-arguments = 10
+max-attributes = 10
+max-locals = 25
+min-public-methods = 0
+
+[tool.pylint.FORMAT]
+max-line-length = 150
+
+[tool.pyright]
+include = ["ytsprint"]
+exclude = [".venv", "**/__pycache__", "tests"]
+
+# Type checking mode ("basic" | "standard" | "strict")
+typeCheckingMode = "standard"
+
+# Environment: local venv in ./.venv
+venvPath = "."
+venv = ".venv"
+
+reportMissingImports = "error"
+reportMissingTypeStubs = false
+
+executionEnvironments = [ { root = ".", extraPaths = ["."] } ]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+addopts = [
+    "--cov=ytsprint.lib_date_utils",
+    "--cov=ytsprint.lib_yt_api",
+    "--cov=ytsprint.version",
+    "--cov-report=html:htmlcov",
+    "--cov-report=term-missing",
+    "--cov-report=xml",
+    "--cov-fail-under=80",
+    "-v"
+]
+markers = [
+    "unit: Unit tests",
+    "integration: Integration tests",
+    "slow: Slow running tests"
+]
+
+[project]
+name = "ytsprint"
+version = "1.0.0"
+description = "YouTrack Sprint Tool: CLI utilities for sprint automation"
+requires-python = ">=3.10"
+authors = [ { name = "Sergei Sveshnikov", email = "svesh87@gmail.com" } ]
+license = { text = "GPL-3.0" }
+readme = "README.md"
+
+[project.scripts]
+make-sprint = "ytsprint.make_sprint:main"
+default-sprint = "ytsprint.default_sprint:main"
