@@ -32,3 +32,8 @@ Helm templates under `helm/templates/**` are excluded from yamllint due to Go te
 ## Additional requirements
 
 - When Python code changes, always run pytest with coverage and keep coverage ≥ 80%.
+
+## Language policy
+
+- All code comments, documentation (including Markdown), and commit messages must be written in English.
+- Chat responses should use the same language as the user's request. If the user's language is unclear, default to English.
