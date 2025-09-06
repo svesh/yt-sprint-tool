@@ -1,4 +1,4 @@
-# Development Rules (updated)
+# Development Rules
 
 Always run the following checks from the local virtualenv (.venv) after any code and/or Markdown change:
 
@@ -29,11 +29,13 @@ If your IDE disagrees with CLI tools, align imports/types (pyright/isort), Markd
 
 Helm templates under `helm/templates/**` are excluded from yamllint due to Go template syntax. Use `helm lint` for those.
 
-## Additional requirements
-
-- When Python code changes, always run pytest with coverage and keep coverage ≥ 80%.
-
 ## Language policy
 
 - All code comments, documentation (including Markdown), and commit messages must be written in English.
 - Chat responses should use the same language as the user's request. If the user's language is unclear, default to English.
+
+## Metadata
+
+```yaml
+applyTo: "**"
+```
