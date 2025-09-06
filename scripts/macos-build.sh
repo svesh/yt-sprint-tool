@@ -53,3 +53,4 @@ mv -f dist/default-sprint "$DIST_DIR/default-sprint-$OUT_SUFFIX"
 
 echo "✅ macOS native build completed. Artifacts in $DIST_DIR:"
 ls -la "$DIST_DIR" | sed -n '1,200p'
+

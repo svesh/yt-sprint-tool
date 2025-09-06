@@ -1,33 +1,26 @@
-# Dockerfile for building Windows binaries with ready Wine image
+FROM ubuntu:24.04 AS builder
+
 # YT Sprint Tool - YouTrack Sprint automation utilities
 # Author: Sergei Sveshnikov (svesh87@gmail.com)
 # Repository: https://github.com/svesh/yt-sprint-tool/
-FROM tobix/pywine:3.12
 
-# Install PyInstaller and project dependencies
-WORKDIR /wine/drive_c/temp
-COPY requirements.txt .
+WORKDIR /app
 
-# Update pip and install dependencies (Windows Python is already in the image)
-RUN wine python -m pip install --upgrade pip
-RUN wine python -m pip install -r requirements.txt
+# Base tools for scripts
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    bash curl ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
-# Copy source code
+# Cacheable deps layer: only requirements and install script
+COPY requirements.txt ./
+COPY scripts/wine-install-deps.sh scripts/wine-install-deps.sh
+RUN bash scripts/wine-install-deps.sh
+
+# Build layer: copy sources and build script
 COPY ytsprint ./ytsprint
+COPY scripts/wine-build.sh scripts/wine-build.sh
+RUN bash scripts/wine-build.sh
 
-# Generate version info files for Windows .exe
-RUN wine python ytsprint/version.py
-
-# Build Windows binaries (.exe) with version information
-RUN wine python -m pip install pyinstaller
-RUN wine python -m PyInstaller --onefile --name make-sprint \
-        --version-file make_sprint_version.py \
-        ytsprint/make_sprint.py
-
-RUN wine python -m PyInstaller --onefile --name default-sprint \
-        --version-file default_sprint_version.py \
-        ytsprint/default_sprint.py
-
-# Create final stage for output artifacts
+# Export stage: output binaries
 FROM scratch AS export-stage
-COPY --from=0 /wine/drive_c/temp/dist/*.exe /
+COPY --from=builder /app/dist/*.exe /

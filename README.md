@@ -14,35 +14,43 @@ Set of utilities for automating sprint management in YouTrack.
 
 ## Description
 
-The project contains two main CLI utilities:
+Two CLI utilities help manage weekly sprints in YouTrack with ISO calendar semantics:
 
-- `make-sprint` — creating sprints on YouTrack Agile board
-- `default-sprint` — synchronizing sprint values between board and project
+- `make-sprint`: creates a sprint on a YouTrack Agile board for a given ISO week.
+  The sprint name format is `YYYY.WW Sprint` (e.g., `2025.32 Sprint`).
+  Dates span Monday–Friday (UTC), covering the full work week in milliseconds.
+- `default-sprint`: synchronizes a project’s sprint field default (by default, `Sprints`)
+  with the sprint of the requested week by resolving the value from the field’s bundle
+  and applying it as the default.
 
-## Installation and Setup
+### Features
 
-### Local Usage
+- ISO week support (Monday–Friday)
+- Automatic current week detection
+- Positional arguments for ease of use
+- Comprehensive error handling and logging
+- Docker-ready architecture for easy deployment
+- Standalone binaries for independent distribution
+
+### Requirements (runtime)
+
+- YouTrack server URL
+- YouTrack REST API token
+- Access to YouTrack server
+
+## Download and Use
+
+- Preferred: download binaries from Releases: <https://github.com/svesh/yt-sprint-tool/releases>
+- Alternative (development): build locally — see the Development section.
+
+### Usage
+
+Set environment variables (recommended) or provide `--url` and `--token` flags explicitly:
 
 ```bash
-# Install dependencies
-pip install -r requirements.txt
-
-# Set environment variables
 export YOUTRACK_URL="https://youtrack.example.com"
-export YOUTRACK_TOKEN="your-bearer-token"
+export YOUTRACK_TOKEN="perm:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 ```
-
-### Docker Build
-
-```bash
-# Linux image (fast)
-docker build -f Dockerfile.debian -t yt-sprint-tool:linux .
-
-# Windows image (with Wine)
-docker build -f Dockerfile.windows -t yt-sprint-tool:windows .
-```
-
-## Usage
 
 ### make-sprint Utility
 
@@ -90,7 +98,57 @@ default-sprint "My Board" "My Project" --week "2025.32"
 - `--field` - Project field name (default "Sprints")
 - `--week` - Week in YYYY.WW format (default - current)
 
-## Architecture
+## Development
+
+See AGENTS.md for contribution rules (patch-based edits; keep all checks green).
+
+### Dependencies
+
+- Python 3.12+
+- Docker (recommended for local builds)
+- YouTrack URL and token
+
+### Environment Setup
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+### Run All Checks
+
+```bash
+bash scripts/linters.sh
+```
+
+### Local Build
+
+Preferred: Docker wrapper (stable, reproducible)
+
+```bash
+bash scripts/build-with-docker.sh            # all
+bash scripts/build-with-docker.sh linux-amd64
+bash scripts/build-with-docker.sh linux-arm64
+bash scripts/build-with-docker.sh windows-amd64
+```
+
+Native (for development):
+
+```bash
+# Linux (static)
+bash scripts/linux-install-deps.sh
+bash scripts/linux-build.sh
+
+# Windows (Wine on Linux)
+bash scripts/wine-install-deps.sh
+bash scripts/wine-build.sh
+
+# macOS (native on host arch)
+bash scripts/macos-build.sh
+```
+
+On macOS, see local Docker setup and notes in [OSX_BUILD.md](OSX_BUILD.md).
 
 ### Package structure
 
@@ -99,51 +157,7 @@ default-sprint "My Board" "My Project" --week "2025.32"
 - `ytsprint/make_sprint.py` — CLI entry (make-sprint)
 - `ytsprint/default_sprint.py` — CLI entry (default-sprint)
 
-### Testing
-
-```bash
-# Run tests
-python test_yt_api.py
-
-# Linting
-flake8 lib_date_utils.py lib_yt_api.py default_sprint.py make_sprint.py test_yt_api.py
-pylint lib_date_utils.py lib_yt_api.py default_sprint.py make_sprint.py test_yt_api.py
-```
-
-## Building Standalone Binaries
-
-### Docker Build (Linux + Windows)
-
-```bash
-# Build binaries for Linux and Windows via Docker Buildx (export-stage)
-docker buildx build -f Dockerfile.debian --platform linux/amd64 --target export-stage --output type=local,dest=dist .
-docker buildx build -f Dockerfile.debian --platform linux/arm64 --target export-stage --output type=local,dest=dist .
-docker buildx build -f Dockerfile.windows --platform linux/amd64 --target export-stage --output type=local,dest=dist .
-```
-
-**Build results in `./dist/` folder:**
-
-- 🐧 **Linux**: `make-sprint-linux`, `default-sprint-linux` (~11MB each)
-- 🪟 **Windows**: `make-sprint.exe`, `default-sprint.exe` (~10MB each)
-
-### macOS (Apple Silicon / Intel)
-
-Build requires a macOS host (cross-compilation with PyInstaller is not supported):
-
-```bash
-scripts/build-macos.sh
-```
-
-Artifacts:
-
-- 🍎 **macOS**: `make-sprint-macos-arm64` / `make-sprint-macos-x86_64`, `default-sprint-macos-arm64` / `default-sprint-macos-x86_64`
-
-Notes:
-
-- For universal (x86_64+arm64) builds use universal Python and two PyInstaller runs with `--target-arch`.
-- CI recommendation: matrix builds — Linux (Docker), Windows (Wine), macOS (native runner).
-
-### Using Binaries
+### Using Binaries (from dist/)
 
 ```bash
 # Linux
@@ -151,25 +165,9 @@ Notes:
 ./dist/default-sprint-linux "My Board" "My Project" --field "Sprints"
 
 # Windows
-./dist/make-sprint.exe "My Board" "2025.32"
-./dist/default-sprint.exe "My Board" "My Project" --field "Sprints"
+./dist/make-sprint-windows-amd64.exe "My Board" "2025.32"
+./dist/default-sprint-windows-amd64.exe "My Board" "My Project" --field "Sprints"
 ```
-
-## Features
-
-- ISO week support (Monday-Friday)
-- Automatic current week detection
-- Positional arguments for ease of use
-- Comprehensive error handling and logging
-- Docker-ready architecture for easy deployment
-- Standalone binaries for independent distribution
-
-## Requirements
-
-- Python 3.12+
-- YouTrack REST API token
-- Access to YouTrack server
-- Docker (for containerized usage)
 
 ## Authors and Contributors
 

@@ -71,37 +71,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 *This project was developed with significant assistance from AI tooling, demonstrating modern collaborative development between human expertise and artificial intelligence capabilities.*
 
-## [2.0.0] - 2025-09-05
+## [2.0.0] - 2025-09-06
 
-Note: This is a preparatory release — some features are still in progress. Below are the completed, user-facing outcomes delivered today.
+This release modernizes the codebase, build system, and CI. It introduces a package layout, adds reproducible builds across OSes, and consolidates quality tooling.
 
 ### ✨ Highlights
 
-- Project refactored into a proper Python package: `ytsprint`
-- Expanded informational logging for default value removal in YouTrack fields
-- Tests moved to `tests/` with coverage thresholds and config updates
-- Entry points added for CLI tools:
-  - `make-sprint = ytsprint.make_sprint:main`
-  - `default-sprint = ytsprint.default_sprint:main`
-- Cross-platform build scripts unified:
-  - Linux/Windows via Dockerfile export-stage + Buildx
-  - macOS native build script (host arch auto-detected)
-- macOS build instructions (Colima/Buildx)
-- CI: Added GitHub Actions workflow to run quality checks and build binaries for Linux (amd64/arm64), Windows (amd64), macOS (arm64/x86_64), with release attachment on tags
-- Repository cleanup: removed obsolete scripts and pre-commit hook, updated .gitignore
-- Documentation updated (README)
+- New package layout: code moved under `ytsprint/` with proper module structure; CLI entry points configured.
+- Build system overhauled and split into install + build phases per OS:
+  - Linux: `scripts/linux-install-deps.sh` + `scripts/linux-build.sh` (always static via staticx)
+  - Windows (Wine on Linux): `scripts/wine-install-deps.sh` + `scripts/wine-build.sh` (headless xvfb + Windows Python inside Wine)
+  - macOS: added `scripts/macos-build.sh` for native builds on host arch
+- Dockerfiles:
+  - `Dockerfile.linux` (Ubuntu 24.04) replaces Debian variant; cache-friendly layers (deps first)
+  - `Dockerfile.windows` (Ubuntu 24.04) installs Wine and reuses the same scripts as CI
+- Local Docker wrapper: `scripts/build-with-docker.sh [all|linux-amd64|linux-arm64|windows-amd64]`
+- CI (GitHub Actions): unconditional builds; Linux/macOS jobs merged with matrix; runners updated to `ubuntu-24.04` and `ubuntu-24.04-arm`; release attaches artifacts
 
-### 🛠 Technical Details
+### 🛠 Tooling & Quality
 
-- Dockerfiles updated to use export-stage for artifact extraction
-- Lint/test configuration aligned with repository rules (pylint 10/10, pyright 0 errors, isort clean, markdown/yaml lint clean, pytest coverage ≥ 80%)
+- Tests under `tests/`; `pytest -v` with coverage ≥ 80%
+- Linters consolidated: pylint, pyright, isort, pymarkdownlnt, yamllint (flake8 removed)
+- Central config: `pyproject.toml`, `.yamllint.yaml`, `.pymarkdownlnt.json`; added `scripts/linters.sh` to run the full suite
+- AGENTS guidelines added/updated (patch-based edits; make scripts executable)
 
 ### 📦 Artifacts
 
 - Linux: `make-sprint-linux-amd64`, `default-sprint-linux-amd64`, `make-sprint-linux-arm64`, `default-sprint-linux-arm64`
 - Windows: `make-sprint-windows-amd64.exe`, `default-sprint-windows-amd64.exe`
 - macOS: `make-sprint-macos-arm64`, `default-sprint-macos-arm64`, `make-sprint-macos-x86_64`, `default-sprint-macos-x86_64`
-
-### 🤖 AI Co-author
-
-- OpenAI Codex CLI (AI assistant): code generation, refactors, tests, CI, docs

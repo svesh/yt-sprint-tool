@@ -22,7 +22,7 @@ echo "🔨 Building and pushing multi-arch image: $IMAGE:$TAG"
 docker buildx build \
   --builder cross \
   --platform linux/arm64,linux/amd64 \
-  -f Dockerfile.debian \
+  -f Dockerfile.linux \
   -t "$IMAGE:$TAG" \
   --push .
 
