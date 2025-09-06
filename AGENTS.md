@@ -2,12 +2,12 @@
 
 Always run the following checks from the local virtualenv (.venv) after any code and/or Markdown change:
 
-- pylint: `source .venv/bin/activate && pylint **/*.py | cat`
-- pyright: `source .venv/bin/activate && pyright | cat`
-- isort: `source .venv/bin/activate && python -m isort --check --diff . | cat`
-- pymarkdownlnt: `source .venv/bin/activate && pymarkdownlnt --config .pymarkdownlnt.json scan --recurse --exclude=./.venv . | cat`
+- pylint: `source .venv/bin/activate && pylint **/*.py`
+- pyright: `source .venv/bin/activate && pyright`
+- isort: `source .venv/bin/activate && python -m isort --check --diff .`
+- pymarkdownlnt: `source .venv/bin/activate && pymarkdownlnt --config .pymarkdownlnt.json scan --recurse --exclude=./.venv .`
 - yamllint: `source .venv/bin/activate && yamllint -c .yamllint.yaml .`
-- pytest (with coverage): `source .venv/bin/activate && pytest -v | cat` (coverage and threshold are configured in pyproject.toml)
+- pytest (with coverage): `source .venv/bin/activate && pytest -v` (coverage and threshold are configured in pyproject.toml)
 - helm lint (if charts present): `helm lint helm/`
 
 Fix any issues immediately and rerun all checks until everything is green.

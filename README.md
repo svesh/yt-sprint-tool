@@ -1,7 +1,10 @@
 # YT Sprint Tool
 
 > **⚠️ AI-Generated Content Notice**  
-> This project and all its content (code, documentation, tests, build scripts) were fully generated using artificial intelligence tools. The project demonstrates modern AI-assisted development capabilities and serves as an example of human-AI collaboration in software engineering.
+> This project and all its content (code, documentation, tests, build scripts)
+> were fully generated using artificial intelligence tools. The project
+> demonstrates modern AI-assisted development capabilities and serves as an
+> example of human-AI collaboration in software engineering.
 
 [![GitHub Repository](https://img.shields.io/badge/GitHub-Repository-blue?logo=github)](https://github.com/svesh/yt-sprint-tool/)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)

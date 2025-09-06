@@ -30,33 +30,33 @@ jobs:
 
       - name: pylint
         run: |
-          pylint **/*.py | cat
+          pylint **/*.py
 
       - name: pyright
         run: |
-          pyright | cat
+          pyright
 
       - name: isort check
         run: |
-          python -m isort --check --diff . | cat
+          python -m isort --check --diff .
 
       - name: markdown lint
         run: |
-          pymarkdownlnt --config .pymarkdownlnt.json scan --recurse --exclude=./.venv . | cat
+          pymarkdownlnt --config .pymarkdownlnt.json scan --recurse --exclude=./.venv .
 
       - name: yamllint
         run: |
-          yamllint -c .yamllint.yaml . | cat
+          yamllint -c .yamllint.yaml .
 
       - name: pytest with coverage
         run: |
-          pytest -v --cov=calendar_parser --cov-fail-under=80 | cat
+          pytest -v --cov=calendar_parser --cov-fail-under=80
 
       - name: helm lint (conditional)
         shell: bash
         run: |
           if command -v helm >/dev/null 2>&1 && [ -d helm ]; then
-            helm lint helm/ | cat
+            helm lint helm/
           else
             echo "helm or helm/ not present, skipping helm lint"
           fi
@@ -67,7 +67,6 @@ jobs:
     needs: quality
     steps:
       - uses: actions/checkout@v4
-      - uses: docker/setup-qemu-action@v3
       - uses: docker/setup-buildx-action@v3
       - name: Build export-stage (amd64)
         run: |
@@ -91,12 +90,17 @@ jobs:
 
   linux-arm64:
     name: Linux arm64
+    # Build arm64 binary on an amd64 runner via buildx to avoid slow arm runners
     runs-on: ubuntu-latest
     needs: quality
     steps:
       - uses: actions/checkout@v4
       - uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
       - uses: docker/setup-buildx-action@v3
+        with:
+          platforms: linux/amd64,linux/arm64
       - name: Build export-stage (arm64)
         run: |
           docker buildx build \
