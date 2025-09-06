@@ -25,11 +25,12 @@ fi
 build_linux() {
   local arch="$1"; local tmp_dir="$DIST_DIR/.tmp-linux-$arch";
   rm -rf "$tmp_dir" && mkdir -p "$tmp_dir"
-  echo "🐧 Building Linux $arch via Docker..."
+  echo "🐧 Building Linux $arch via Docker (unified Dockerfile, FLAVOR=linux)..."
   docker buildx build \
     --platform "linux/$arch" \
-    -f Dockerfile.linux \
-    --target export-stage \
+    -f Dockerfile \
+    --build-arg FLAVOR=linux \
+    --target export \
     --output "type=local,dest=$tmp_dir" \
     .
   if [[ -f "$tmp_dir/make-sprint-linux-$arch" ]]; then
@@ -56,11 +57,12 @@ build_linux() {
 build_windows_amd64() {
   local tmp_dir="$DIST_DIR/.tmp-windows-amd64";
   rm -rf "$tmp_dir" && mkdir -p "$tmp_dir"
-  echo "🪟 Building Windows amd64 via Docker + Wine..."
+  echo "🪟 Building Windows amd64 via Docker + Wine (unified Dockerfile, FLAVOR=wine)..."
   docker buildx build \
     --platform linux/amd64 \
-    -f Dockerfile.windows \
-    --target export-stage \
+    -f Dockerfile \
+    --build-arg FLAVOR=wine \
+    --target export \
     --output "type=local,dest=$tmp_dir" \
     .
   # Support both plain names and suffixed names from wine-build.sh

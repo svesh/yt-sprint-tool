@@ -8,9 +8,6 @@ if [[ ! -d .venv ]]; then
 fi
 source .venv/bin/activate
 
-echo "==> Upgrading pip"
-python -m pip install --upgrade pip >/dev/null
-
 echo "==> pylint"
 pylint **/*.py
 
@@ -37,4 +34,3 @@ else
 fi
 
 echo "✅ All checks completed"
-

@@ -82,18 +82,17 @@ This release modernizes the codebase, build system, and CI. It introduces a pack
   - Linux: `scripts/linux-install-deps.sh` + `scripts/linux-build.sh` (always static via staticx)
   - Windows (Wine on Linux): `scripts/wine-install-deps.sh` + `scripts/wine-build.sh` (headless xvfb + Windows Python inside Wine)
   - macOS: added `scripts/macos-build.sh` for native builds on host arch
-- Dockerfiles:
-  - `Dockerfile.linux` (Ubuntu 24.04) replaces Debian variant; cache-friendly layers (deps first)
-  - `Dockerfile.windows` (Ubuntu 24.04) installs Wine and reuses the same scripts as CI
+- Unified Dockerfile: single ARG-driven `Dockerfile` with three stages (`builder`, `export`, `runtime` for Linux). `FLAVOR=linux|wine` selects install/build scripts.
 - Local Docker wrapper: `scripts/build-with-docker.sh [all|linux-amd64|linux-arm64|windows-amd64]`
-- CI (GitHub Actions): unconditional builds; Linux/macOS jobs merged with matrix; runners updated to `ubuntu-24.04` and `ubuntu-24.04-arm`; release attaches artifacts
+- CI (GitHub Actions): unconditional builds; Linux/macOS jobs merged with matrix; runners updated to `ubuntu-24.04` and `ubuntu-24.04-arm`; release attaches artifacts.
+- Linux CI: build with system Python (no `actions/setup-python`) to avoid PyInstaller RUNPATH and enable staticx wrapping.
 
 ### 🛠 Tooling & Quality
 
 - Tests under `tests/`; `pytest -v` with coverage ≥ 80%
 - Linters consolidated: pylint, pyright, isort, pymarkdownlnt, yamllint (flake8 removed)
 - Central config: `pyproject.toml`, `.yamllint.yaml`, `.pymarkdownlnt.json`; added `scripts/linters.sh` to run the full suite
-- AGENTS guidelines added/updated (patch-based edits; make scripts executable)
+- AGENTS guidelines updated: planning checklists with review gates; targeted vs. full checks policy; patch-based edits; make scripts executable
 
 ### 📦 Artifacts
 

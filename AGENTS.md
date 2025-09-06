@@ -1,11 +1,18 @@
 # Development Rules
 
-Always run the full check suite after any code and/or documentation change:
+Run checks appropriate to the files you changed, and keep the loop tight:
 
-- From the local virtualenv (.venv): `bash scripts/linters.sh`.
-- The script aggregates: pylint, pyright, isort (check), pymarkdownlnt, yamllint, pytest, and optional helm lint.
+- Python code: pylint, pyright, isort (check), pytest (with coverage).
+- Markdown/docs: pymarkdownlnt.
+- YAML/CI configs: yamllint.
+- Helm charts: helm lint (if `helm/` exists).
+- Mixed changes: combine the relevant checks.
 
-Fix any issues immediately and rerun all checks until everything is green.
+Before finishing an iteration (or opening a PR), run the full suite from the local virtualenv (.venv):
+
+- `bash scripts/linters.sh` (aggregates pylint, pyright, isort check, pymarkdownlnt, yamllint, pytest, optional helm lint).
+
+Fix issues immediately and rerun the relevant checks until green.
 
 Do not finish an iteration until all tools are green:
 - pylint: 10/10 and no errors
@@ -44,6 +51,16 @@ If your IDE disagrees with CLI tools, align imports/types (pyright/isort), Markd
 - Make every change explicit and reviewable. Do not use tools that silently rewrite files.
 - If a formatter is required, run it with repo config and include the results as regular, reviewable edits.
 - Commit new scripts with the executable bit set (`chmod +x`).
+
+## Planning and Task Checklists
+
+- Plan first: for any non-trivial task, write 3–7 concise steps.
+- Track with the checklist tool: one step `in_progress`; mark `completed` as you finish.
+- Update on change: revise the plan and record a short rationale.
+- Keep steps meaningful; avoid boilerplate (e.g., “Explore codebase”).
+- Preambles: before grouped tool calls, post a brief 1–2 sentence note.
+- Progress: share short updates on longer tasks.
+- Review gate: if the plan implies substantial changes, present it for user review and wait for acknowledgment before execution.
 
 ## Metadata
 
