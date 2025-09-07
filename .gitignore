@@ -67,6 +67,8 @@ logs/
 .pytest_cache/
 .mypy_cache/
 .coverage
+ .coverage.*
+coverage.xml
 htmlcov/
 
 # Temporary files
@@ -80,4 +82,3 @@ temp/
 python-installer.exe
 build-win/
 dist-windows/
-

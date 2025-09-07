@@ -21,9 +21,12 @@ This module contains common functions for working with YouTrack API,
 used in make_sprint.py and default_sprint.py.
 """
 
+import logging
 from typing import Any, Dict, List, Optional
 
 import requests
+
+logger = logging.getLogger(__name__)
 
 
 class YouTrackAPI:
@@ -83,12 +86,15 @@ class YouTrackAPI:
         response.raise_for_status()
         return response.json()
 
-    def delete(self, path: str) -> None:
+    def delete(self, path: str) -> int:
         """
         Performs DELETE request to YouTrack API.
 
         Args:
             path (str): Path to API endpoint.
+
+        Returns:
+            int: HTTP status code (200/204/404 considered successful).
 
         Raises:
             requests.HTTPError: On HTTP errors (except 404).
@@ -97,6 +103,7 @@ class YouTrackAPI:
         response = requests.delete(url, headers=self.headers, timeout=30)
         if response.status_code not in (200, 204, 404):
             response.raise_for_status()
+        return response.status_code
 
     def find_board_id(self, board_name: str) -> Optional[str]:
         """
@@ -159,8 +166,10 @@ class YouTrackAPI:
         Returns:
             str or None: Sprint ID or None if not found.
         """
-        sprints = self.get(f"/api/agiles/{board_id}/sprints",
-                           params={"fields": "id,name", "$top": 1000})
+        sprints = self.get(
+            f"/api/agiles/{board_id}/sprints",
+            params={"fields": "id,name", "$top": 1000},
+        )
         for sprint in sprints:
             if sprint.get("name") == sprint_name:
                 return sprint.get("id")
@@ -176,8 +185,10 @@ class YouTrackAPI:
         Returns:
             str or None: Project ID or None if not found.
         """
-        projects = self.get("/api/admin/projects",
-                            params={"fields": "id,name", "$top": 1000})
+        projects = self.get(
+            "/api/admin/projects",
+            params={"fields": "id,name", "$top": 1000},
+        )
         for project in projects:
             if project.get("name") == project_name:
                 return project.get("id")
@@ -194,16 +205,27 @@ class YouTrackAPI:
         """
         defaults_path = f"/api/admin/projects/{project_id}/customFields/{field_id}/defaultValues"
 
-        # Get and delete old values
+        logger.info("Fetching current default values: project=%s field=%s", project_id, field_id)
         defaults = self.get(defaults_path, params={"fields": "id", "$top": 1000})
+        logger.info("Found %d default value(s) to remove", len(defaults))
+
         for default in defaults:
             default_id = default.get("id")
-            if default_id:
-                self.delete(f"{defaults_path}/{default_id}")
+            if not default_id:
+                logger.warning("Skip default without id: %s", default)
+                continue
+            logger.info("Deleting default value: id=%s", default_id)
+            status = self.delete(f"{defaults_path}/{default_id}")
+            if status == 404:
+                logger.info("Default value already absent: id=%s", default_id)
+            else:
+                logger.info("Default value removed: id=%s status=%s", default_id, status)
 
-        # Add new values
+        logger.info("Setting new default value(s): %s", ",".join(value_ids))
         for value_id in value_ids:
+            logger.info("Adding default value id=%s", value_id)
             self.post(defaults_path, {"id": value_id, "$type": "VersionBundleElement"})
+        logger.info("Default values update completed: project=%s field=%s", project_id, field_id)
 
     def get_field_defaults(self, project_id: str, field_id: str) -> Any:
         """
@@ -230,8 +252,10 @@ class YouTrackAPI:
         Returns:
             list: List of project fields with bundle data.
         """
-        return self.get(f"/api/admin/projects/{project_id}/customFields",
-                        params={"fields": "id,field(id,name),bundle(id,values(id,name)),defaultValues(id,name)"})
+        return self.get(
+            f"/api/admin/projects/{project_id}/customFields",
+            params={"fields": "id,field(id,name),bundle(id,values(id,name)),defaultValues(id,name)"},
+        )
 
     def find_bundle_value_by_name(self, bundle_values: List[Dict[str, Any]], value_name: str) -> Optional[str]:
         """

@@ -1,9 +1,25 @@
 requests>=2.28.0
-flake8>=6.0.0
-flake8-builtins>=2.0.0
-flake8-import-order>=0.18.0
-pylint>=2.17.0
-pytest>=7.0.0
-pytest-cov>=4.0.0
 pyinstaller==6.14.2
-# staticx==0.14.1  # Linux only - installed separately in Dockerfile.debian
+# staticx==0.14.1  # Linux only - installed separately in Dockerfile.linux
+
+# Linters and QA tools
+pyright==1.1.403
+pylint==3.3.8
+isort==6.0.1
+pymarkdownlnt==0.9.31
+yamllint==1.37.0
+
+# Testing
+pytest==8.4.1
+pytest-cov==6.0.0
+pytest-mock==3.14.1
+freezegun==1.5.1
+requests-mock==1.12.1
+
+# Daemon & Prometheus (used only with --daemon)
+apscheduler>=3.10.4
+prometheus_client>=0.20.0
+
+# Daemon and metrics (used by default-sprint --daemon)
+apscheduler>=3.10.4
+prometheus_client>=0.20.0

@@ -5,29 +5,38 @@ version: 1
 
 # Files that are partially or fully AI-generated
 ai_generated:
-  - "lib_yt_api.py"
-  - "test_yt_api.py" 
-  - "lib_date_utils.py"
-  - "Dockerfile.debian"
-  - "Dockerfile.windows"
-  - "build-separate.sh"
-  - ".pre-commit-config.yaml"
-  - ".pylintrc"
-  - ".flake8"
+  - "ytsprint/lib_yt_api.py"
+  - "ytsprint/lib_date_utils.py"
+  - "ytsprint/lib_sprint.py"
+  - "ytsprint/lib_daemon.py"
+  - "ytsprint/version.py"
+  - "tests/test_yt_api.py"
+  - "tests/test_default_sprint.py"
+  - "tests/test_default_sprint_errors.py"
+  - "tests/test_default_sprint_main_daemon.py"
+  - "tests/test_make_sprint_cli.py"
+  - "tests/test_cli_args.py"
+  - "tests/test_version.py"
+  - "Dockerfile"
   - ".dockerignore"
-  - "test_version.py"
-  - "version.py"
+  - "scripts/linux-build.sh"
+  - "scripts/wine-build.sh"
+  - "scripts/macos-build.sh"
+  - "scripts/push-multi-ghcr.sh"
+  - ".github/workflows/build-binaries.yml"
 
 # Documentation that mentions AI collaboration
 documentation:
   - "README.md"
   - "CHANGELOG.md"
+  - "OSX_BUILD.md"
+  - "AGENTS.md"
 
 # Collaboration model
 collaboration_type: "human-ai"
 ai_tools:
-  - "Claude 4 Sonnet"
-  - "GitHub Copilot"
+  - "GitHub Copilot (Claude 4 Sonnet)"
+  - "OpenAI Codex CLI"
 
 # Human oversight and validation
 human_verified: true

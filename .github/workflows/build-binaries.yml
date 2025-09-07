@@ -1,0 +1,179 @@
+name: Build Binaries
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  quality:
+    name: Quality Checks
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyright isort pymarkdownlnt yamllint
+
+      - name: pylint
+        run: |
+          pylint **/*.py
+
+      - name: pyright
+        run: |
+          pyright
+
+      - name: isort check
+        run: |
+          python -m isort --check --diff .
+
+      - name: markdown lint
+        run: |
+          pymarkdownlnt --config .pymarkdownlnt.json scan --recurse --exclude=./.venv .
+
+      - name: yamllint
+        run: |
+          yamllint -c .yamllint.yaml .
+
+      - name: pytest with coverage
+        run: |
+          pytest -v --cov=ytsprint --cov-fail-under=80
+
+      - name: helm lint (conditional)
+        shell: bash
+        run: |
+          if command -v helm >/dev/null 2>&1 && [ -d helm ]; then
+            helm lint helm/
+          else
+            echo "helm or helm/ not present, skipping helm lint"
+          fi
+
+  linux:
+    name: Linux (${{ matrix.arch }})
+    needs: quality
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            arch: amd64
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Linux build deps
+        shell: bash
+        run: |
+          bash scripts/linux-install-deps.sh
+      - name: Build linux ${{ matrix.arch }}
+        shell: bash
+        run: |
+          bash scripts/linux-build.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: binaries-linux-${{ matrix.arch }}
+          path: |
+            dist/make-sprint-linux-${{ matrix.arch }}
+            dist/default-sprint-linux-${{ matrix.arch }}
+
+  windows-amd64:
+    name: Windows amd64 (via Wine)
+    runs-on: ubuntu-24.04
+    needs: quality
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Wine build deps
+        shell: bash
+        run: |
+          bash scripts/wine-install-deps.sh
+      - name: Build windows via Wine
+        shell: bash
+        run: |
+          bash scripts/wine-build.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: binaries-windows-amd64
+          path: |
+            dist/make-sprint-windows-amd64.exe
+            dist/default-sprint-windows-amd64.exe
+
+  macos:
+    name: macOS (${{ matrix.arch }})
+    needs: quality
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix:
+        include:
+          - runner: macos-14
+            arch: arm64
+          - runner: macos-13
+            arch: x86_64
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Create venv and install deps
+        shell: bash
+        run: |
+          python -m venv .venv
+          source .venv/bin/activate
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+          scripts/macos-build.sh
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: binaries-macos-${{ matrix.arch }}
+          path: |
+            dist/make-sprint-macos-${{ matrix.arch }}
+            dist/default-sprint-macos-${{ matrix.arch }}
+
+  release:
+    name: Release (attach artifacts)
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-24.04
+    needs: [linux, windows-amd64, macos]
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release
+          merge-multiple: true
+
+      - name: List artifacts
+        run: |
+          ls -la release
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            release/make-sprint-linux-amd64
+            release/default-sprint-linux-amd64
+            release/make-sprint-linux-arm64
+            release/default-sprint-linux-arm64
+            release/make-sprint-windows-amd64.exe
+            release/default-sprint-windows-amd64.exe
+            release/make-sprint-macos-arm64
+            release/default-sprint-macos-arm64
+            release/make-sprint-macos-x86_64
+            release/default-sprint-macos-x86_64
+          draft: false
+          prerelease: false

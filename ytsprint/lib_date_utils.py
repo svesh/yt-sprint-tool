@@ -76,7 +76,7 @@ class DateUtils:
             if not 1 <= week <= 53:
                 raise ValueError("Week must be between 1 and 53")
             return year, week
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-exception-caught
             raise argparse.ArgumentTypeError("Expected format YYYY.WW, e.g. 2025.32") from exc
 
     @staticmethod

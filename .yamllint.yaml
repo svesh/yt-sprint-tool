@@ -1,0 +1,38 @@
+extends: default
+
+# Исключения для Helm шаблонов
+ignore:
+  - 'helm/templates/**'
+  - '.venv/**'
+
+rules:
+  # Длина строки
+  line-length:
+    max: 180
+    level: warning
+
+  # Отступы
+  indentation:
+    spaces: 2
+    indent-sequences: true
+
+  # Пустые строки в конце файла
+  empty-lines:
+    max: 1
+    max-end: 1
+
+  # Документы YAML
+  document-start:
+    present: false
+
+  # Комментарии
+  comments-indentation:
+    level: warning
+
+  # Ключи
+  key-duplicates:
+    level: error
+
+  # Значения
+  truthy:
+    check-keys: false
