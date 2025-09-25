@@ -45,6 +45,32 @@ def test_default_sprint_main_missing_auth(monkeypatch) -> None:  # type: ignore[
     assert called["exit"] == 1
 
 
+def test_default_sprint_main_missing_board(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    """main should exit(1) when board/project are absent and env unset."""
+    argv = [
+        "default-sprint",
+        "--url",
+        "https://yt",
+        "--token",
+        "tok",
+    ]
+    called = {"exit": None}
+
+    def _fake_exit(code):  # type: ignore[no-untyped-def]
+        called["exit"] = code
+        raise SystemExit(code)
+
+    monkeypatch.setattr("sys.argv", argv)
+    monkeypatch.setattr("sys.exit", _fake_exit)
+
+    try:
+        ds.main()
+    except SystemExit:  # expected
+        pass
+
+    assert called["exit"] == 1
+
+
 def test_default_sprint_main_single_run(monkeypatch) -> None:  # type: ignore[no-untyped-def]
     """main should call run_once in non-daemon mode when auth present."""
     argv = [

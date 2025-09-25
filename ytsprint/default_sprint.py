@@ -28,6 +28,7 @@ import argparse
 import logging
 import os
 import sys
+from typing import Optional, Tuple
 
 from ytsprint.lib_daemon import DaemonRunner
 from ytsprint.lib_sprint import SprintService
@@ -35,6 +36,18 @@ from ytsprint.lib_yt_api import YouTrackAPI
 from ytsprint.version import get_version_for_argparse
 
 logger = logging.getLogger(__name__)
+
+
+def _read_env_int(name: str, default: int) -> Tuple[int, Optional[str]]:
+    """Parse an integer from environment variable with graceful fallback."""
+
+    value = os.environ.get(name)
+    if value is None or value == "":
+        return default, None
+    try:
+        return int(value), None
+    except ValueError:
+        return default, f"Invalid {name} value '{value}'. Using {default}."
 
 
 def parse_args() -> argparse.Namespace:
@@ -49,17 +62,30 @@ def parse_args() -> argparse.Namespace:
         week, forward count, daemon flags (cron, metrics-addr, metrics-port),
         and YouTrack connection details (url, token).
     """
+    forward_default, forward_warning = _read_env_int("YTSPRINT_FORWARD", 0)
+
     parser = argparse.ArgumentParser(description="Sprint synchronization between board and project")
-    parser.add_argument("board", help="Board name")
-    parser.add_argument("project", help="Project name")
+    parser.add_argument(
+        "board",
+        nargs="?",
+        default=os.environ.get("YOUTRACK_BOARD", ""),
+        help="Board name (or env YOUTRACK_BOARD)",
+    )
+    parser.add_argument(
+        "project",
+        nargs="?",
+        default=os.environ.get("YOUTRACK_PROJECT", ""),
+        help="Project name (or env YOUTRACK_PROJECT)",
+    )
     parser.add_argument("--field", default="Sprints", help="Field name (default: Sprints)")
     parser.add_argument("--week", help="Week in YYYY.WW format (default - current)")
     parser.add_argument(
         "--forward",
         type=int,
-        default=0,
+        default=forward_default,
         help=(
-            "How many future sprints to ensure exist (default: 0). "
+            "How many future sprints to ensure exist. "
+            "Default: env YTSPRINT_FORWARD or 0. "
             "Always switches project default to the actual sprint."
         ),
     )
@@ -70,8 +96,8 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--cron",
-        default="0 8 * * 1",
-        help="Crontab string for daemon schedule (UTC). Default: '0 8 * * 1'",
+        default=os.environ.get("YTSPRINT_CRON", "0 8 * * 1"),
+        help="Crontab string for daemon schedule (UTC). Default: env YTSPRINT_CRON or '0 8 * * 1'",
     )
     parser.add_argument(
         "--metrics-addr",
@@ -84,12 +110,8 @@ def parse_args() -> argparse.Namespace:
         default=9108,
         help="Prometheus exporter port (default: 9108)",
     )
-    parser.add_argument(
-        "--url", default=os.environ.get("YOUTRACK_URL"), help="YouTrack URL (or env YOUTRACK_URL)"
-    )
-    parser.add_argument(
-        "--token", default=os.environ.get("YOUTRACK_TOKEN"), help="Bearer token (or env YOUTRACK_TOKEN)"
-    )
+    parser.add_argument("--url", default=os.environ.get("YOUTRACK_URL", ""), help="YouTrack URL (or env YOUTRACK_URL)")
+    parser.add_argument("--token", default=os.environ.get("YOUTRACK_TOKEN", ""), help="Bearer token (or env YOUTRACK_TOKEN)")
     parser.add_argument(
         "--version",
         action="version",
@@ -102,9 +124,10 @@ def parse_args() -> argparse.Namespace:
         default=os.environ.get("YTSPRINT_LOG_LEVEL", "INFO"),
         help=(
             "Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL). "
-            "If omitted, uses env YTSPRINT_LOG_LEVEL; default INFO."
+            "If omitted, uses env YTSPRINT_LOG_LEVEL or INFO."
         ),
     )
+    parser.set_defaults(env_forward_warning=forward_warning, env_forward_default=forward_default)
     return parser.parse_args()
 
 
@@ -143,13 +166,24 @@ def main() -> None:
         None
     """
     args = parse_args()
+    raw_log_level = args.log_level
+
     # Configure logging with CLI/env-provided level
-    level = getattr(logging, str(args.log_level).upper(), logging.INFO)
+    level = getattr(logging, str(raw_log_level).upper(), logging.INFO)
     logging.basicConfig(level=level, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+
+    forward_warning = getattr(args, "env_forward_warning", None)
+    forward_default = getattr(args, "env_forward_default", args.forward)
+    if forward_warning and args.forward == forward_default:
+        logger.warning(forward_warning)
+
+    if not args.board or not args.project:
+        logger.error("Specify board and project or set YOUTRACK_BOARD / YOUTRACK_PROJECT")
+        sys.exit(1)
 
     if not args.url or not args.token:
         logger.error(
-            "❌ Specify --url and --token or environment variables YOUTRACK_URL / YOUTRACK_TOKEN"
+            "Specify --url and --token or environment variables YOUTRACK_URL / YOUTRACK_TOKEN"
         )
         sys.exit(1)
 
@@ -161,7 +195,7 @@ def main() -> None:
         return
 
     SprintService(yt).run_sync_once(args.board, args.project, args.field, args.week, args.forward)
-    logger.info("🎉 Synchronization completed!")
+    logger.info("Synchronization completed")
 
 
 if __name__ == "__main__":

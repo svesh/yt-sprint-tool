@@ -59,5 +59,13 @@ RUN useradd -m -u 1000 appuser
 USER appuser
 WORKDIR /home/appuser
 
-CMD ["make-sprint", "--help"]
+ENV YOUTRACK_URL="" \
+    YOUTRACK_TOKEN="" \
+    YTSPRINT_CRON="0 8 * * 1" \
+    YTSPRINT_FORWARD="1" \
+    YTSPRINT_LOG_LEVEL="INFO" \
+    YOUTRACK_BOARD="" \
+    YOUTRACK_PROJECT=""
 
+ENTRYPOINT ["default-sprint"]
+CMD ["--daemon"]

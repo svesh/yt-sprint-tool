@@ -123,19 +123,19 @@ class DaemonRunner:
         Raises:
             SystemExit: If required dependencies cannot be imported.
         """
-        logger.info("🛰️ Starting daemon mode (UTC)...")
+        logger.info("Starting daemon mode (UTC)...")
         try:
             scheduler_cls, trigger_cls, gauge_cls, start_http_server = self._import_deps()
         except Exception as exc:  # pylint: disable=broad-exception-caught
             logger.error(
-                "❌ Failed to import daemon dependencies: %s. Install apscheduler and prometheus_client.",
+                "Failed to import daemon dependencies: %s. Install apscheduler and prometheus_client.",
                 exc,
             )
             raise SystemExit(1) from exc
 
         status_gauge, state = self._init_metrics(gauge_cls)
         start_http_server(addr=self.metrics_addr, port=self.metrics_port)
-        logger.info("📈 Prometheus exporter: http://%s:%s/metrics", self.metrics_addr, self.metrics_port)
+        logger.info("Prometheus exporter: http://%s:%s/metrics", self.metrics_addr, self.metrics_port)
 
         def _job_wrapper() -> None:
             state["last_run_ts"] = time.time()
@@ -150,10 +150,10 @@ class DaemonRunner:
                 status_gauge.set(val)
 
         scheduler = self._build_scheduler(scheduler_cls, trigger_cls, _job_wrapper)
-        logger.info("⏱️  Cron schedule (UTC): %s", self.cron)
+        logger.info("Cron schedule (UTC): %s", self.cron)
         try:
             while True:
                 time.sleep(1)
         except KeyboardInterrupt:
-            logger.info("🛑 Stopping daemon...")
+            logger.info("Stopping daemon...")
             scheduler.shutdown(wait=True)  # type: ignore[attr-defined]

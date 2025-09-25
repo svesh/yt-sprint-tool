@@ -96,7 +96,7 @@ def main() -> None:
 
     if not args.url or not args.token:
         logger.error(
-            "❌ Specify --url and --token or environment variables YOUTRACK_URL / YOUTRACK_TOKEN"
+            "Specify --url and --token or environment variables YOUTRACK_URL / YOUTRACK_TOKEN"
         )
         sys.exit(1)
 

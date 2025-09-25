@@ -1,6 +1,6 @@
 # YT Sprint Tool
 
-> **⚠️ AI-Generated Content Notice**  
+> **AI-Generated Content Notice**  
 > This project and all its content (code, documentation, tests, build scripts)
 > were fully generated using artificial intelligence tools. The project
 > demonstrates modern AI-assisted development capabilities and serves as an
@@ -120,6 +120,39 @@ Prometheus metrics exposed at `http://<metrics-addr>:<metrics-port>/metrics`:
 - `ytsprint_cron_seconds`: seconds since last cron run (NaN until first run)
 - `ytsprint_cron_status`: last run status (`1` on success, `0` on failure)
 
+## Docker Runtime Image
+
+Multi-architecture images (linux/amd64 and linux/arm64) are published to GitHub Container Registry at `ghcr.io/<owner>/yt-sprint-tool`.
+
+Environment variables recognised by the runtime image:
+
+- `YOUTRACK_URL` – YouTrack base URL (required)
+- `YOUTRACK_TOKEN` – YouTrack permanent token (required)
+- `YOUTRACK_BOARD` – default board name used when positional arguments are omitted
+- `YOUTRACK_PROJECT` – default project name used when positional arguments are omitted
+- `YTSPRINT_CRON` – cron expression for daemon mode (default: `0 8 * * 1`)
+- `YTSPRINT_FORWARD` – number of future sprints to ensure (default inside the container: `1`)
+- `YTSPRINT_LOG_LEVEL` – logging verbosity (`INFO`, `DEBUG`, etc.; default: `INFO`)
+
+The container entrypoint is the `default-sprint` binary.
+By default it runs daemon mode using environment-provided settings.
+Pass the board and project as additional arguments or override options as needed:
+
+```bash
+docker run --rm \
+  -e YOUTRACK_URL="https://youtrack.example.com" \
+  -e YOUTRACK_TOKEN="perm:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" \
+  ghcr.io/<owner>/yt-sprint-tool --daemon "My Board" "My Project"
+```
+
+Docker replaces the default command when explicit arguments are supplied,
+so the container depends on the built-in environment defaults for the cron schedule
+and forward count unless you override them.
+If you omit the positional `board` and `project`, set `YOUTRACK_BOARD` and `YOUTRACK_PROJECT`
+so the entrypoint can resolve them automatically.
+
+Customise scheduling or log verbosity by overriding the corresponding environment variables (for example, `-e YTSPRINT_CRON="0 */2 * * 1-5"`).
+
 ## Development
 
 See AGENTS.md for contribution rules (patch-based edits; keep all checks green).
@@ -195,19 +228,19 @@ On macOS, see local Docker setup and notes in [OSX_BUILD.md](OSX_BUILD.md).
 
 ## Authors and Contributors
 
-### 👨‍💻 Primary Author
+### Primary Author
 
 **Sergei Sveshnikov** - concept development, architecture, testing
 
 - Email: [svesh87@gmail.com](mailto:svesh87@gmail.com)
 - GitHub: [@svesh](https://github.com/svesh)
 
-### 🤖 AI Co-authors
+### AI Co-authors
 
 - v1.0.0 — **GitHub Copilot (Claude 4 Sonnet)**: initial scaffolding, early tests, documentation, and build system ideas
-- v2.0.0 — **OpenAI Codex CLI (AI assistant)**: package refactor, logging improvements, test relocation and coverage, CI workflows, build scripts, and documentation updates
+- v2.0.X — **OpenAI Codex CLI (AI assistant)**: package refactor, logging improvements, test relocation and coverage, CI workflows, build scripts, and documentation updates
 
-### 🤝 Collaborative Development
+### Collaborative Development
 
 This project demonstrates effective collaboration between human expertise and artificial intelligence capabilities. The AI assistant participated in:
 

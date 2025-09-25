@@ -3,7 +3,7 @@ set -euo pipefail
 
 echo "==> Activating venv"
 if [[ ! -d .venv ]]; then
-  echo "❌ .venv not found. Create it: python -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt" >&2
+  echo "ERROR: .venv not found. Create it: python -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt" >&2
   exit 1
 fi
 source .venv/bin/activate
@@ -33,4 +33,4 @@ else
   echo "(skip) helm or helm/ not present"
 fi
 
-echo "✅ All checks completed"
+echo "All checks completed successfully"

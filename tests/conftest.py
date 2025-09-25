@@ -1,8 +1,26 @@
 #!/usr/bin/env python3
-"""Ensure package import from repo root during tests."""
+"""Common pytest fixtures and test configuration."""
 import os
 import sys
+
+import pytest
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
+
+
+@pytest.fixture(autouse=True)
+def clear_youtrack_env(monkeypatch):  # type: ignore[no-untyped-def]
+    """Remove YouTrack credentials from the environment for every test."""
+
+    for key in (
+        "YOUTRACK_URL",
+        "YOUTRACK_TOKEN",
+        "YOUTRACK_BOARD",
+        "YOUTRACK_PROJECT",
+        "YTSPRINT_CRON",
+        "YTSPRINT_FORWARD",
+        "YTSPRINT_LOG_LEVEL",
+    ):
+        monkeypatch.delenv(key, raising=False)
