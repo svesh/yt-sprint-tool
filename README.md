@@ -186,6 +186,7 @@ bash scripts/build-with-docker.sh            # all
 bash scripts/build-with-docker.sh linux-amd64
 bash scripts/build-with-docker.sh linux-arm64
 bash scripts/build-with-docker.sh windows-amd64
+bash scripts/build-with-docker.sh runtime     # load runtime container image for local debugging
 ```
 
 Native (for development):

@@ -55,7 +55,7 @@ RUN set -eux; \
     install -m 0755 "$ds" /usr/local/bin/default-sprint; \
     rm -rf /dist
 
-RUN useradd -m -u 1000 appuser
+RUN useradd -m appuser
 USER appuser
 WORKDIR /home/appuser
 

@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Documentation and runtime messages no longer use emoji glyphs; README describes the GHCR image and configuration.
 - Tests now clear YouTrack credentials from the environment to prevent accidental access to live services during local runs.
 - GitHub Actions workflow now builds and publishes multi-architecture images to GHCR for branches and release tags.
+- build-with-docker helper can now produce the runtime image locally for debugging while keeping exported binaries clean.
 
 ### Removed
 
