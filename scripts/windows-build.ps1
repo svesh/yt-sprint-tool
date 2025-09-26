@@ -2,7 +2,7 @@
 
 $ErrorActionPreference = "Stop"
 
-$repoRoot = Split-Path -Parent $MyInvocation.MyCommand.Definition
+$repoRoot = (Get-Item $PSScriptRoot).Parent.FullName
 Set-Location $repoRoot
 
 $dist = Join-Path $repoRoot "dist"
@@ -10,15 +10,13 @@ if (-not (Test-Path $dist)) {
     New-Item -ItemType Directory -Path $dist | Out-Null
 }
 
-Write-Host "Cleaning previous Windows binaries..."
-Get-ChildItem -Path $dist -Filter "ytsprint-windows-*.exe" -ErrorAction SilentlyContinue | Remove-Item -Force
+$stagingExe = Join-Path $dist "ytsprint.exe"
+if (Test-Path $stagingExe) {
+    Remove-Item -Force $stagingExe
+}
+
 Remove-Item -ErrorAction SilentlyContinue -Recurse build
 Remove-Item -ErrorAction SilentlyContinue ytsprint.spec
-
-Write-Host "Ensuring dependencies installed..."
-python -m pip install --upgrade pip
-pip install -r requirements.txt
-pip install pyinstaller
 
 $pythonArch = python -c "import platform; print(platform.architecture()[0])"
 switch ($pythonArch) {
@@ -38,6 +36,9 @@ if (-not (Test-Path $builtExe)) {
 }
 
 $targetExe = Join-Path $dist ("ytsprint-windows-{0}.exe" -f $artifactArch)
+if (Test-Path $targetExe) {
+    Remove-Item -Force $targetExe
+}
 Move-Item -Path $builtExe -Destination $targetExe -Force
 
 Write-Host "Windows binary available at $targetExe"

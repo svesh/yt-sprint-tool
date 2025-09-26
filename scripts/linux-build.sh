@@ -22,20 +22,15 @@ case "$UNAME_M" in
     ;;
 esac
 
-PYTHON_BIN="${PYTHON_BIN:-python}"
-if ! command -v "$PYTHON_BIN" >/dev/null 2>&1; then
-  if command -v python3 >/dev/null 2>&1; then
-    PYTHON_BIN="python3"
-  else
-    echo "Python interpreter not found. Install python3 first." >&2
-    exit 1
-  fi
+if ! command -v pyinstaller >/dev/null 2>&1; then
+  echo "pyinstaller not found. Install it via pip (see README)." >&2
+  exit 1
 fi
 
-echo "Installing build dependencies via pip (pyinstaller, staticx)..."
-"$PYTHON_BIN" -m pip install --upgrade pip >/dev/null
-"$PYTHON_BIN" -m pip install -r requirements.txt >/dev/null
-"$PYTHON_BIN" -m pip install pyinstaller staticx >/dev/null
+if ! command -v staticx >/dev/null 2>&1; then
+  echo "staticx not found. Install it via pip (see README)." >&2
+  exit 1
+fi
 
 # Clean previous build artifacts
 rm -rf build ytsprint.spec dist/ytsprint dist/ytsprint-static || true
@@ -52,3 +47,4 @@ chmod 0755 "$TARGET_PATH"
 rm -f dist/ytsprint
 
 echo "Linux binary available at $TARGET_PATH"
+ls -la dist

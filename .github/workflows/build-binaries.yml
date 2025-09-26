@@ -24,9 +24,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install pyright isort pymarkdownlnt yamllint
 
       - name: pylint
         run: |
@@ -112,9 +110,7 @@ jobs:
       - name: Install dependencies
         shell: pwsh
         run: |
-          python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install pyinstaller
       - name: Build Windows binary
         shell: pwsh
         run: |
@@ -146,9 +142,7 @@ jobs:
         run: |
           python -m venv .venv
           source .venv/bin/activate
-          python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install pyinstaller
           scripts/macos-build.sh
       - name: Upload artifacts
         uses: actions/upload-artifact@v4

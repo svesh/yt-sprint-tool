@@ -28,3 +28,12 @@ $SUDO apt-get install -y --no-install-recommends \
   python3-dev \
   build-essential \
   patchelf
+
+PIP_FLAGS=()
+if python3 -m pip install --help 2>/dev/null | grep -q "break-system-packages"; then
+  PIP_FLAGS+=("--break-system-packages")
+fi
+
+python3 -m pip install -r requirements.txt "${PIP_FLAGS[@]}"
+python3 -m pip install "scons>=4.7" "${PIP_FLAGS[@]}"
+python3 -m pip install --no-build-isolation staticx==0.14.1 "${PIP_FLAGS[@]}"

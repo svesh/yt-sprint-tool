@@ -73,15 +73,22 @@ build_linux() {
     --target export \
     --output "type=local,dest=$tmp_dir" \
     .
-  if [[ -f "$tmp_dir/ytsprint-linux-$arch" ]]; then
-    mv -f "$tmp_dir/ytsprint-linux-$arch" "$artifact"
-    chmod +x "$artifact" || true
-  elif [[ -f "$tmp_dir/ytsprint" ]]; then
-    mv -f "$tmp_dir/ytsprint" "$artifact"
-    chmod +x "$artifact" || true
-  else
-    echo "Warning: ytsprint binary not found for $arch"
+  echo "Exported files for $arch:"
+  ls -la "$tmp_dir"
+  local candidate="$tmp_dir/ytsprint-linux-$arch"
+  if [[ ! -f "$candidate" && -f "$tmp_dir/dist/ytsprint-linux-$arch" ]]; then
+    candidate="$tmp_dir/dist/ytsprint-linux-$arch"
   fi
+  if [[ ! -f "$candidate" && -f "$tmp_dir/ytsprint" ]]; then
+    candidate="$tmp_dir/ytsprint"
+  fi
+  if [[ ! -f "$candidate" ]]; then
+    echo "ERROR: ytsprint binary not found for $arch" >&2
+    find "$tmp_dir" -maxdepth 2 -type f -print
+    exit 2
+  fi
+  mv -f "$candidate" "$artifact"
+  chmod +x "$artifact" || true
   rm -rf "$tmp_dir"
 }
 

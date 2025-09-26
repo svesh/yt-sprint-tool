@@ -16,13 +16,15 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt ./requirements.txt
-COPY scripts ./scripts
+COPY scripts/internal ./scripts/internal
 
 RUN bash scripts/internal/prepare-linux-deps.sh
+
+COPY scripts/linux-build.sh ./scripts/linux-build.sh
 
 COPY ytsprint ./ytsprint
 
 RUN bash scripts/linux-build.sh
 
 FROM scratch AS export
-COPY --from=builder /app/dist/ /dist/
+COPY --from=builder /app/dist/ /
