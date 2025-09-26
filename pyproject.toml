@@ -23,11 +23,11 @@ min-public-methods = 0
 max-line-length = 150
 
 [tool.pyright]
-include = ["ytsprint"]
-exclude = [".venv", "**/__pycache__", "tests"]
+include = ["ytsprint", "tests"]
+exclude = [".venv", "**/__pycache__"]
 
 # Type checking mode ("basic" | "standard" | "strict")
-typeCheckingMode = "standard"
+typeCheckingMode = "strict"
 
 # Environment: local venv in ./.venv
 venvPath = "."
@@ -66,5 +66,4 @@ license = { text = "GPL-3.0" }
 readme = "README.md"
 
 [project.scripts]
-make-sprint = "ytsprint.make_sprint:main"
-default-sprint = "ytsprint.default_sprint:main"
+ytsprint = "ytsprint.cli:main"

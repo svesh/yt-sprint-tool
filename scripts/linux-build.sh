@@ -3,7 +3,7 @@ set -euo pipefail
 
 # Build Linux binaries natively (no Docker) using PyInstaller
 # and always wrap with staticx for static executables.
-# Outputs: dist/make-sprint-linux-<arch>, dist/default-sprint-linux-<arch>
+# Output: dist/ytsprint-linux-<arch>
 
 DIST_DIR="dist"
 mkdir -p "$DIST_DIR"
@@ -41,20 +41,17 @@ fi
 # Clean previous build artifacts
 rm -rf build dist/*.spec || true
 
-echo "Building Linux binaries for arch=$OUT_ARCH..."
-pyinstaller --onefile --clean --name make-sprint ytsprint/make_sprint.py
-pyinstaller --onefile --clean --name default-sprint ytsprint/default_sprint.py
+echo "Building Linux binary for arch=$OUT_ARCH..."
+pyinstaller --onefile --clean --name ytsprint ytsprint/cli.py
 
-echo "Wrapping binaries with staticx..."
-staticx dist/make-sprint dist/make-sprint-static
-staticx dist/default-sprint dist/default-sprint-static
+echo "Wrapping binary with staticx..."
+staticx dist/ytsprint dist/ytsprint-static
 
-# Move to expected names
-install -m 0755 dist/make-sprint-static "$DIST_DIR/make-sprint-linux-$OUT_ARCH"
-install -m 0755 dist/default-sprint-static "$DIST_DIR/default-sprint-linux-$OUT_ARCH"
+# Move to expected name
+install -m 0755 dist/ytsprint-static "$DIST_DIR/ytsprint-linux-$OUT_ARCH"
 
 # Remove intermediate binaries to keep the directory tidy
-rm -f dist/make-sprint dist/default-sprint dist/make-sprint-static dist/default-sprint-static
+rm -f dist/ytsprint dist/ytsprint-static
 
 echo "Done. Artifacts in $DIST_DIR:"
 ls -la "$DIST_DIR" | sed -n '1,200p'

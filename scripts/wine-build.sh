@@ -26,8 +26,9 @@ to_win_path() {
   fi
 }
 
-export WINEARCH="${WINEARCH:-win64}"
-export WINEPREFIX="${WINEPREFIX:-$(pwd)/.wine-python312}"
+WINE_TARGET_ARCH="${WINE_TARGET_ARCH:-amd64}"
+export WINEARCH="${WINEARCH:-$( [[ "$WINE_TARGET_ARCH" == "x86" ]] && echo win32 || echo win64 )}"
+export WINEPREFIX="${WINEPREFIX:-$(pwd)/.wine-python312-$WINE_TARGET_ARCH}"
 
 if ! ensure_cmd wine; then
   echo "wine not found; run scripts/wine-install-deps.sh first" >&2
@@ -40,16 +41,14 @@ REPO_WIN_PATH="$(to_win_path "$(pwd)")"
 DIST_DIR="dist"
 mkdir -p "$DIST_DIR"
 
-echo "Building Windows executables via PyInstaller (Wine)..."
-with_xvfb wine "$PY_WIN" -m PyInstaller --onefile --clean --name make-sprint "${REPO_WIN_PATH}\\ytsprint\\make_sprint.py"
-with_xvfb wine "$PY_WIN" -m PyInstaller --onefile --clean --name default-sprint "${REPO_WIN_PATH}\\ytsprint\\default_sprint.py"
+echo "Building Windows executable via PyInstaller (Wine)..."
+with_xvfb wine "$PY_WIN" -m PyInstaller --onefile --clean --name ytsprint "${REPO_WIN_PATH}\\ytsprint\\cli.py"
 
-# Move artifacts from dist/ to expected names
-if [[ -f dist/make-sprint.exe ]]; then
-  mv -f dist/make-sprint.exe "$DIST_DIR/make-sprint-windows-amd64.exe"
-fi
-if [[ -f dist/default-sprint.exe ]]; then
-  mv -f dist/default-sprint.exe "$DIST_DIR/default-sprint-windows-amd64.exe"
+# Move artifact from dist/ to expected name
+if [[ -f dist/ytsprint.exe ]]; then
+  suffix="$WINE_TARGET_ARCH"
+  [[ "$suffix" == "x86" ]] && suffix="x86" || suffix="amd64"
+  mv -f dist/ytsprint.exe "$DIST_DIR/ytsprint-windows-${suffix}.exe"
 fi
 
 echo "Done. Artifacts in $DIST_DIR:"

@@ -56,8 +56,26 @@ if ! grep -q 'wait "$XVFBPID"' /usr/bin/xvfb-run 2>/dev/null; then
         wait "$XVFBPID" >>"$ERRORFILE" 2>&1' /usr/bin/xvfb-run || true
 fi
 
-export WINEARCH="win64"
-export WINEPREFIX="$(pwd)/.wine-python312"
+PY_VER="3.12.7"
+WINE_TARGET_ARCH="${WINE_TARGET_ARCH:-amd64}"
+case "$WINE_TARGET_ARCH" in
+  amd64)
+    export WINEARCH="win64"
+    PY_SUFFIX="amd64"
+    PY_INSTALLER="python-${PY_VER}-${PY_SUFFIX}.exe"
+    ;;
+  x86|win32)
+    WINE_TARGET_ARCH="x86"
+    export WINEARCH="win32"
+    PY_SUFFIX="win32"
+    PY_INSTALLER="python-${PY_VER}.exe"
+    ;;
+  *)
+    echo "Unsupported WINE_TARGET_ARCH: $WINE_TARGET_ARCH (use amd64 or x86)" >&2
+    exit 1
+    ;;
+esac
+export WINEPREFIX="${WINEPREFIX:-$(pwd)/.wine-python312-$WINE_TARGET_ARCH}"
 mkdir -p "$WINEPREFIX"
 
 echo "Initializing Wine prefix..."
@@ -75,9 +93,6 @@ with_xvfb sh -c "\
   wine reg add 'HKCU\\Software\\Wine\\DllOverrides' /v mshtml /t REG_SZ /d '' /f && \
   wineserver -w"
 
-PY_VER="3.12.7"
-PY_SUFFIX="amd64"
-PY_INSTALLER="python-${PY_VER}-${PY_SUFFIX}.exe"
 PY_URL="https://www.python.org/ftp/python/${PY_VER}/${PY_INSTALLER}"
 
 CACHE_DIR=".cache/wine-python"

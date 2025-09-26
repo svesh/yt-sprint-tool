@@ -14,14 +14,14 @@ Set of utilities for automating sprint management in YouTrack.
 
 ## Description
 
-Two CLI utilities help manage weekly sprints in YouTrack with ISO calendar semantics:
+The unified `ytsprint` CLI manages ISO-week sprints in YouTrack and exposes two
+execution modes:
 
-- `make-sprint`: creates a sprint on a YouTrack Agile board for a given ISO week.
-  The sprint name format is `YYYY.WW Sprint` (e.g., `2025.32 Sprint`).
-  Dates span Monday–Friday (UTC), covering the full work week in milliseconds.
-- `default-sprint`: synchronizes a project’s sprint field default (by default, `Sprints`)
-  with the sprint of the requested week by resolving the value from the field’s bundle
-  and applying it as the default.
+- **Sync** (`--sync`, default) – ensures the sprint for the requested week
+  exists on the board, updates the project default field, can provision future
+  weeks, and supports cron-driven daemon execution.
+- **Create** (`--create`) – guarantees that the `YYYY.WW Sprint` exists on the
+  board without modifying project settings.
 
 ### Features
 
@@ -52,37 +52,29 @@ export YOUTRACK_URL="https://youtrack.example.com"
 export YOUTRACK_TOKEN="perm:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 ```
 
-### make-sprint Utility
-
-Create sprint for specified week on Agile board.
+### ytsprint CLI Examples
 
 ```bash
-# Create sprint for current week
-make-sprint "My Board"
+# Create a sprint for the current week (create mode)
+ytsprint --create --board "My Board"
 
-# Create sprint for specific week
-make-sprint "My Board" "2025.32"
-```
+# Create a sprint for a specific week
+ytsprint --create --board "My Board" --week "2025.32"
 
-### default-sprint Utility
+# Synchronize project defaults (sync mode)
+ytsprint --board "My Board" --project "My Project"
 
-Synchronize sprint values between board and project.
+# Sync with a custom field and ensure two future weeks
+ytsprint --board "My Board" --project "My Project" --field "Custom Field" --forward 2
 
-```bash
-# Sync with default "Sprints" field
-default-sprint "My Board" "My Project"
+# Sync for a specific week
+ytsprint --board "My Board" --project "My Project" --week "2025.32"
 
-# Sync with custom field
-default-sprint "My Board" "My Project" --field "Custom Field"
+# Ensure future weeks while syncing
+ytsprint --board "My Board" --project "My Project" --forward 2
 
-# For specific week
-default-sprint "My Board" "My Project" --week "2025.32"
-
-# Ensure future sprints (create next N weeks)
-default-sprint "My Board" "My Project" --forward 2
-
-# Run as a daemon (UTC) every Monday 08:00, with Prometheus metrics
-default-sprint "My Board" "My Project" \
+# Run as a daemon with Prometheus metrics
+ytsprint --board "My Board" --project "My Project" \
   --daemon \
   --cron "0 8 * * 1" \
   --metrics-addr 0.0.0.0 \
@@ -91,29 +83,27 @@ default-sprint "My Board" "My Project" \
 
 ## Parameters
 
-### Common Parameters
+### Common options
 
-- `--url` - YouTrack server URL (or env `YOUTRACK_URL`)
-- `--token` - Bearer token for API (or env `YOUTRACK_TOKEN`)
+- `--board` – Agile board name (or env `YOUTRACK_BOARD`)
+- `--week` – ISO week in `YYYY.WW` format (defaults to the current week)
+- `--url` – YouTrack URL (or env `YOUTRACK_URL`)
+- `--token` – YouTrack REST token (or env `YOUTRACK_TOKEN`)
+- `--log-level` – logging verbosity (or env `YTSPRINT_LOG_LEVEL`, default `INFO`)
 
-### make_sprint.py Parameters
+### `--create` mode
 
-- `board` - Agile board name (positional argument)
-- `week` - Week in YYYY.WW format (optional positional argument)
-- `--log-level` - Logging level (`DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`). If omitted, uses env `YTSPRINT_LOG_LEVEL`; default `INFO`.
+- Uses only board, week, URL, token, and log level options
+- Mutually exclusive with `--daemon`
 
-### default_sprint.py Parameters
+### `--sync` mode
 
-- `board` - Agile board name (positional argument)
-- `project` - Project name (positional argument)
-- `--field` - Project field name (default "Sprints")
-- `--week` - Week in YYYY.WW format (default - current)
-- `--forward` - How many future sprints to ensure exist (default: 0). Default value is always switched to the current sprint.
-- `--daemon` - Run as background daemon with cron schedule (UTC)
-- `--cron` - Crontab string for schedule (default: `0 8 * * 1`)
-- `--metrics-addr` - Prometheus exporter bind address (default: `0.0.0.0`)
-- `--metrics-port` - Prometheus exporter port (default: `9108`)
-- `--log-level` - Logging level (`DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`). If omitted, uses env `YTSPRINT_LOG_LEVEL`; default `INFO`.
+- `--project` – project name (or env `YOUTRACK_PROJECT`)
+- `--field` – project field name (default `Sprints`)
+- `--forward` – number of future sprints to create/ensure (or env `YTSPRINT_FORWARD`)
+- `--daemon` – run continuously on a cron schedule
+- `--cron` – cron expression (or env `YTSPRINT_CRON`, default `0 8 * * 1`)
+- `--metrics-addr`, `--metrics-port` – Prometheus exporter binding
 
 Prometheus metrics exposed at `http://<metrics-addr>:<metrics-port>/metrics`:
 
@@ -134,22 +124,22 @@ Environment variables recognised by the runtime image:
 - `YTSPRINT_FORWARD` – number of future sprints to ensure (default inside the container: `1`)
 - `YTSPRINT_LOG_LEVEL` – logging verbosity (`INFO`, `DEBUG`, etc.; default: `INFO`)
 
-The container entrypoint is the `default-sprint` binary.
-By default it runs daemon mode using environment-provided settings.
-Pass the board and project as additional arguments or override options as needed:
+The container entrypoint is the `ytsprint` binary.
+By default it runs sync mode in daemon configuration using environment-provided settings.
+Pass the board and project via options or override other parameters on launch:
 
 ```bash
 docker run --rm \
   -e YOUTRACK_URL="https://youtrack.example.com" \
   -e YOUTRACK_TOKEN="perm:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" \
-  ghcr.io/<owner>/yt-sprint-tool --daemon "My Board" "My Project"
+  ghcr.io/<owner>/yt-sprint-tool --board "My Board" --project "My Project" --daemon
 ```
 
-Docker replaces the default command when explicit arguments are supplied,
-so the container depends on the built-in environment defaults for the cron schedule
-and forward count unless you override them.
-If you omit the positional `board` and `project`, set `YOUTRACK_BOARD` and `YOUTRACK_PROJECT`
-so the entrypoint can resolve them automatically.
+Docker replaces the default command when explicit arguments are supplied, so the
+container relies on environment defaults for the cron schedule and forward count
+unless you override them with explicit flags. If you omit `--board` and
+`--project`, set `YOUTRACK_BOARD` and `YOUTRACK_PROJECT` so the entrypoint can
+infer them automatically.
 
 Customise scheduling or log verbosity by overriding the corresponding environment variables (for example, `-e YTSPRINT_CRON="0 */2 * * 1-5"`).
 
@@ -186,6 +176,7 @@ bash scripts/build-with-docker.sh            # all
 bash scripts/build-with-docker.sh linux-amd64
 bash scripts/build-with-docker.sh linux-arm64
 bash scripts/build-with-docker.sh windows-amd64
+bash scripts/build-with-docker.sh windows-x86
 bash scripts/build-with-docker.sh runtime     # load runtime container image for local debugging
 ```
 
@@ -212,19 +203,22 @@ On macOS, see local Docker setup and notes in [OSX_BUILD.md](OSX_BUILD.md).
 - `ytsprint/lib_yt_api.py` — YouTrack REST API client
 - `ytsprint/lib_sprint.py` — sprint service (ensure/create, defaults, forward, one‑off sync)
 - `ytsprint/lib_daemon.py` — daemon runner (cron, Prometheus metrics)
-- `ytsprint/make_sprint.py` — CLI entry (make‑sprint)
-- `ytsprint/default_sprint.py` — CLI entry (default‑sprint)
+- `ytsprint/cli.py` — unified CLI entry point (`ytsprint`)
 
 ### Using Binaries (from dist/)
 
 ```bash
 # Linux
-./dist/make-sprint-linux "My Board" "2025.32"
-./dist/default-sprint-linux "My Board" "My Project" --field "Sprints"
+./dist/ytsprint-linux-amd64 --create --board "My Board" --week "2025.32"
+./dist/ytsprint-linux-amd64 --board "My Board" --project "My Project"
 
-# Windows
-./dist/make-sprint-windows-amd64.exe "My Board" "2025.32"
-./dist/default-sprint-windows-amd64.exe "My Board" "My Project" --field "Sprints"
+# Windows (amd64)
+./dist/ytsprint-windows-amd64.exe --create --board "My Board" --week "2025.32"
+./dist/ytsprint-windows-amd64.exe --board "My Board" --project "My Project"
+
+# Windows (x86)
+./dist/ytsprint-windows-x86.exe --create --board "My Board" --week "2025.32"
+./dist/ytsprint-windows-x86.exe --board "My Board" --project "My Project"
 ```
 
 ## Authors and Contributors

@@ -33,22 +33,18 @@ PROJECT_URL = "https://github.com/svesh/yt-sprint-tool/"
 GITHUB_URL = "https://github.com/svesh/yt-sprint-tool/"
 
 # Product descriptions
-MAKE_SPRINT_DESCRIPTION = "YouTrack Sprint Creator - Creates sprints on YouTrack Agile boards"
-DEFAULT_SPRINT_DESCRIPTION = "YouTrack Sprint Sync - Synchronizes sprint values between board and project"
+CLI_DESCRIPTION = "Unified CLI for sprint creation and synchronization"
+SYNC_DESCRIPTION = "Synchronize project default sprint with board sprint"
+CREATE_DESCRIPTION = "Create ISO-week sprint on a YouTrack board"
 
 # General information
 PROJECT_NAME = "YT Sprint Tool"
 
 
 def get_version_for_argparse(tool_name: str) -> str:
-    """Returns version information in single line for argparse"""
+    """Return version information for argparse version flag."""
 
-    descriptions = {
-        "make-sprint": MAKE_SPRINT_DESCRIPTION,
-        "default-sprint": DEFAULT_SPRINT_DESCRIPTION,
-    }
-
-    description = descriptions.get(tool_name, f"{PROJECT_NAME} - Tool")
+    description = CLI_DESCRIPTION if tool_name == "ytsprint" else f"{PROJECT_NAME} - Tool"
 
     return (
         f"{PROJECT_NAME} {VERSION} | {description} | Author: {AUTHOR} | "
@@ -56,16 +52,21 @@ def get_version_for_argparse(tool_name: str) -> str:
     )
 
 
-def generate_windows_version_info(filename, version=VERSION, description="", product_name=""):
-    """Generates .rc file with version information for Windows PyInstaller"""
+def generate_windows_version_info(
+    filename: str,
+    version: str = VERSION,
+    description: str = "",
+    product_name: str = "",
+) -> str:
+    """Generate .rc file contents with version information for PyInstaller."""
 
     # Parse version into Windows format (4 numbers)
-    version_parts = version.split('.')
+    version_parts = version.split(".")
     while len(version_parts) < 4:
-        version_parts.append('0')
+        version_parts.append("0")
 
-    version_tuple = ','.join(version_parts[:4])
-    version_string = '.'.join(version_parts[:3])
+    version_tuple = ",".join(version_parts[:4])
+    version_string = ".".join(version_parts[:3])
 
     year = COPYRIGHT_YEAR
     email = AUTHOR_EMAIL
@@ -103,36 +104,26 @@ def generate_windows_version_info(filename, version=VERSION, description="", pro
     ),
     VarFileInfo([VarStruct(u'Translation', [1033, 1200])])
   ]
+
 )'''
 
     return rc_content
 
 
-def generate_windows_version_files():
-    """Generates version files for Windows .exe files"""
+def generate_windows_version_files() -> None:
+    """Generate version info file for the unified Windows executable."""
 
-    make_sprint_version = generate_windows_version_info(
-        filename="make-sprint.exe",
-        description=MAKE_SPRINT_DESCRIPTION,
-        product_name="YT Sprint Tool - Sprint Creator",
+    unified_version = generate_windows_version_info(
+        filename="ytsprint.exe",
+        description=CLI_DESCRIPTION,
+        product_name="YT Sprint Tool",
     )
 
-    default_sprint_version = generate_windows_version_info(
-        filename="default-sprint.exe",
-        description=DEFAULT_SPRINT_DESCRIPTION,
-        product_name="YT Sprint Tool - Sprint Sync",
-    )
-
-    # Write files
-    with open("make_sprint_version.py", "w", encoding="utf-8") as f:
-        f.write(make_sprint_version)
-
-    with open("default_sprint_version.py", "w", encoding="utf-8") as f:
-        f.write(default_sprint_version)
+    with open("ytsprint_version.py", "w", encoding="utf-8") as file_handle:
+        file_handle.write(unified_version)
 
     print("Version info files generated:")
-    print("  - make_sprint_version.py")
-    print("  - default_sprint_version.py")
+    print("  - ytsprint_version.py")
 
 
 if __name__ == "__main__":

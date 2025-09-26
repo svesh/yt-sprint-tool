@@ -3,9 +3,9 @@ pyinstaller==6.14.2
 # staticx==0.14.1  # Linux only - installed separately in Dockerfile.linux
 
 # Linters and QA tools
-pyright==1.1.403
-pylint==3.3.8
-isort==6.0.1
+pyright>=1.1.403
+pylint>=3.3.8
+isort>=6.0.1
 pymarkdownlnt==0.9.31
 yamllint==1.37.0
 
@@ -16,6 +16,6 @@ pytest-mock==3.14.1
 freezegun==1.5.1
 requests-mock==1.12.1
 
-# Daemon runtime (required for default-sprint daemon mode)
+# Daemon runtime (used for ytsprint --sync --daemon)
 apscheduler>=3.10.4
 prometheus_client>=0.20.0

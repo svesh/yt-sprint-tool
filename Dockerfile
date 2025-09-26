@@ -8,6 +8,8 @@
 FROM ubuntu:24.04 AS builder
 
 ARG FLAVOR=linux
+ARG WINE_TARGET_ARCH=amd64
+ENV WINE_TARGET_ARCH=${WINE_TARGET_ARCH}
 WORKDIR /app
 
 # Minimal base tools; install specifics via scripts/*-install-deps.sh
@@ -49,10 +51,8 @@ RUN apt-get update && apt-get install -y \
 
 COPY --from=builder /app/dist /dist
 RUN set -eux; \
-    ms=$(echo /dist/make-sprint-linux-*); \
-    ds=$(echo /dist/default-sprint-linux-*); \
-    install -m 0755 "$ms" /usr/local/bin/make-sprint; \
-    install -m 0755 "$ds" /usr/local/bin/default-sprint; \
+    bin=$(echo /dist/ytsprint-linux-*); \
+    install -m 0755 "$bin" /usr/local/bin/ytsprint; \
     rm -rf /dist
 
 RUN useradd -m appuser
@@ -67,5 +67,5 @@ ENV YOUTRACK_URL="" \
     YOUTRACK_BOARD="" \
     YOUTRACK_PROJECT=""
 
-ENTRYPOINT ["default-sprint"]
+ENTRYPOINT ["ytsprint"]
 CMD ["--daemon"]

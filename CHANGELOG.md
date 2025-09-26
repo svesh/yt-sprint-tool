@@ -5,6 +5,23 @@ All notable changes to YT Sprint Tool will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0] - 2025-09-27
+
+### Added
+
+- Test coverage for the unified CLI, sprint service helpers, and daemon runner to keep each module above 80% coverage.
+- Windows x86 (32-bit) Wine build alongside the existing amd64 artifact.
+
+### Changed
+
+- Replaced the `make-sprint` and `default-sprint` binaries with a single `ytsprint` executable that provides `--sync` (default) and `--create` modes.
+- Updated build scripts, Docker packaging, and documentation to describe the unified CLI flow and artifacts.
+- Local Docker helper (`scripts/build-with-docker.sh`) exports both Windows architectures (amd64 and x86) and reuses the Wine build pipeline via build arguments.
+
+### Removed
+
+- Deprecated modules `ytsprint/make_sprint.py`, `ytsprint/default_sprint.py`, and their dedicated CLI tests.
+
 ## [2.0.1] - 2025-09-26
 
 ### Added
