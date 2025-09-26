@@ -23,6 +23,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   system layers across architectures.
 - Runtime Docker image builds consume pre-built binaries (dist locally, Linux artifacts in CI) and publish
   multi-architecture manifests in parallel Docker jobs.
+- CI: enabled pip caching in Quality, Windows, and macOS jobs via actions/setup-python cache with `requirements.txt` as dependency path.
+- CI: added explicit pip cache for Linux job using actions/cache on `~/.cache/pip`, keyed by `requirements.txt` and `scripts/internal/prepare-linux-deps.sh`.
+- Build time: faster repeat builds across OSes; no changes to produced artifacts or runtime behaviour.
 
 ### Removed
 

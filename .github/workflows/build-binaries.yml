@@ -21,6 +21,8 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: requirements.txt
 
       - name: Install dependencies
         run: |
@@ -72,6 +74,14 @@ jobs:
             arch: arm64
     steps:
       - uses: actions/checkout@v4
+      - name: Cache pip (Linux)
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt', 'scripts/internal/prepare-linux-deps.sh') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
       - name: Install Linux build deps
         shell: bash
         run: |
@@ -106,6 +116,8 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: requirements.txt
           architecture: ${{ matrix.python_arch }}
       - name: Install dependencies
         shell: pwsh
@@ -137,6 +149,8 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: requirements.txt
       - name: Create venv and install deps
         shell: bash
         run: |
