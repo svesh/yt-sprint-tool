@@ -54,4 +54,3 @@ fi
 
 echo "Done. Artifacts in $DIST_DIR:"
 ls -la "$DIST_DIR" | sed -n '1,200p'
-

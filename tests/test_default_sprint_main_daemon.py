@@ -18,7 +18,6 @@ You should have received a copy of the GNU General Public License
 along with this program. If not, see <https://www.gnu.org/licenses/>.
 """
 
-from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import ytsprint.lib_daemon as daemon
@@ -144,42 +143,34 @@ class DummyGauge:  # type: ignore[too-few-public-methods]
         self.val = x
 
 
-def _import_module_stub(name):  # type: ignore[no-untyped-def]
-    """Return stub modules for apscheduler and prometheus_client."""
-    if name == "apscheduler.schedulers.background":
-        return SimpleNamespace(BackgroundScheduler=DummyScheduler)
-    if name == "apscheduler.triggers.cron":
-        return SimpleNamespace(CronTrigger=DummyCron)
-    if name == "prometheus_client":
-        return SimpleNamespace(Gauge=DummyGauge, start_http_server=lambda **_k: None)
-    raise ImportError(name)
-
-
 def test_start_daemon_success_then_interrupt(monkeypatch) -> None:  # type: ignore[no-untyped-def]
     """start_daemon should start, run one job, and stop on KeyboardInterrupt."""
     _ = MagicMock()  # no-op API placeholder
-    args = SimpleNamespace(
-        board="Board",
-        project="Project",
-        field="Sprints",
-        week="2025.30",
-        forward=0,
-        cron="* * * * *",
-        metrics_addr="127.0.0.1",
-        metrics_port=9999,
-    )
+    args = {
+        "board": "Board",
+        "project": "Project",
+        "field": "Sprints",
+        "week": "2025.30",
+        "forward": 0,
+        "cron": "* * * * *",
+        "metrics_addr": "127.0.0.1",
+        "metrics_port": 9999,
+    }
 
     called = {"count": 0}
 
     def _fake_run_once(*_a, **_k):  # type: ignore[no-untyped-def]
         called["count"] += 1
 
-    monkeypatch.setattr("importlib.import_module", _import_module_stub)
+    monkeypatch.setattr(daemon, "BackgroundScheduler", DummyScheduler)
+    monkeypatch.setattr(daemon, "CronTrigger", DummyCron)
+    monkeypatch.setattr(daemon, "Gauge", DummyGauge)
+    monkeypatch.setattr(daemon, "start_http_server", lambda **_k: None)
     with patch.object(daemon.time, "sleep", side_effect=KeyboardInterrupt):
         def _job():  # type: ignore[no-untyped-def]
-            _fake_run_once(object(), args.board, args.project, args.field, args.week, args.forward)
+            _fake_run_once(object(), args["board"], args["project"], args["field"], args["week"], args["forward"])
 
-        runner = daemon.DaemonRunner(args.cron, args.metrics_addr, args.metrics_port)
+        runner = daemon.DaemonRunner(args["cron"], args["metrics_addr"], args["metrics_port"])
         runner.start(_job)
 
     assert called["count"] == 1

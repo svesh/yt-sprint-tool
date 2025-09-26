@@ -19,17 +19,20 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 Class-based API: DaemonRunner(cron, metrics_addr, metrics_port).start(job_func)
 
-All third-party imports (APScheduler, prometheus_client) are loaded dynamically
-to keep static checks and non-daemon runs independent of these packages.
+This module now imports APScheduler and prometheus_client at module load time,
+making daemon dependencies mandatory for the runtime build.
 """
 
 from __future__ import annotations
 
 import datetime as dt
-import importlib
 import logging
 import time
 from typing import Any, Callable, Dict, Optional, Tuple
+
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.cron import CronTrigger
+from prometheus_client import Gauge, start_http_server
 
 logger = logging.getLogger(__name__)
 
@@ -49,24 +52,6 @@ class DaemonRunner:
         self.cron = cron
         self.metrics_addr = metrics_addr
         self.metrics_port = int(metrics_port)
-
-    @staticmethod
-    def _import_deps() -> Tuple[Any, Any, Any, Callable[..., None]]:
-        """
-        Import APScheduler and Prometheus client modules dynamically.
-
-        Returns:
-            tuple: (BackgroundScheduler class, CronTrigger class, Gauge class, start_http_server function)
-        """
-        apscheduler_bg = importlib.import_module("apscheduler.schedulers.background")
-        apscheduler_triggers = importlib.import_module("apscheduler.triggers.cron")
-        prom = importlib.import_module("prometheus_client")
-
-        background_scheduler_cls = getattr(apscheduler_bg, "BackgroundScheduler")
-        cron_trigger_cls = getattr(apscheduler_triggers, "CronTrigger")
-        gauge_cls = getattr(prom, "Gauge")
-        start_http_server = getattr(prom, "start_http_server")
-        return background_scheduler_cls, cron_trigger_cls, gauge_cls, start_http_server
 
     @staticmethod
     def _init_metrics(gauge_cls: Any) -> Tuple[Any, Dict[str, Optional[float]]]:
@@ -92,23 +77,14 @@ class DaemonRunner:
         seconds_gauge.set_function(_seconds)
         return status_gauge, state
 
-    def _build_scheduler(self, scheduler_cls: Any, trigger_cls: Any, job_func: Callable[[], None]) -> Any:
-        """
-        Build and start APScheduler with cron trigger (UTC).
+    def _build_scheduler(self, job_func: Callable[[], None]) -> BackgroundScheduler:
+        """Build and start APScheduler with cron trigger (UTC)."""
 
-        Args:
-            scheduler_cls (type): BackgroundScheduler class.
-            trigger_cls (type): CronTrigger class.
-            job_func (Callable): Job callback to execute.
-
-        Returns:
-            Any: Started scheduler instance.
-        """
-        scheduler = scheduler_cls(
+        scheduler = BackgroundScheduler(
             timezone=dt.timezone.utc,
             job_defaults={"coalesce": False, "misfire_grace_time": 30},
         )
-        trigger = trigger_cls.from_crontab(self.cron, timezone=dt.timezone.utc)
+        trigger = CronTrigger.from_crontab(self.cron, timezone=dt.timezone.utc)
         scheduler.add_job(job_func, trigger=trigger, next_run_time=dt.datetime.now(dt.timezone.utc))
         scheduler.start()
         return scheduler
@@ -124,16 +100,7 @@ class DaemonRunner:
             SystemExit: If required dependencies cannot be imported.
         """
         logger.info("Starting daemon mode (UTC)...")
-        try:
-            scheduler_cls, trigger_cls, gauge_cls, start_http_server = self._import_deps()
-        except Exception as exc:  # pylint: disable=broad-exception-caught
-            logger.error(
-                "Failed to import daemon dependencies: %s. Install apscheduler and prometheus_client.",
-                exc,
-            )
-            raise SystemExit(1) from exc
-
-        status_gauge, state = self._init_metrics(gauge_cls)
+        status_gauge, state = self._init_metrics(Gauge)
         start_http_server(addr=self.metrics_addr, port=self.metrics_port)
         logger.info("Prometheus exporter: http://%s:%s/metrics", self.metrics_addr, self.metrics_port)
 
@@ -149,7 +116,7 @@ class DaemonRunner:
                 val = 0.0 if state["last_status"] is None else float(state["last_status"])  # type: ignore[arg-type]
                 status_gauge.set(val)
 
-        scheduler = self._build_scheduler(scheduler_cls, trigger_cls, _job_wrapper)
+        scheduler = self._build_scheduler(_job_wrapper)
         logger.info("Cron schedule (UTC): %s", self.cron)
         try:
             while True:

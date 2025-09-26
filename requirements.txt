@@ -16,10 +16,6 @@ pytest-mock==3.14.1
 freezegun==1.5.1
 requests-mock==1.12.1
 
-# Daemon & Prometheus (used only with --daemon)
-apscheduler>=3.10.4
-prometheus_client>=0.20.0
-
-# Daemon and metrics (used by default-sprint --daemon)
+# Daemon runtime (required for default-sprint daemon mode)
 apscheduler>=3.10.4
 prometheus_client>=0.20.0
