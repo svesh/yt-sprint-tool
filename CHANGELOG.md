@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Test coverage for the unified CLI, sprint service helpers, and daemon runner to keep each module above 80% coverage.
 - Native Windows build script (`scripts/windows-build.ps1`) used by CI and local developers for x64 and x86 executables.
+- Documentation: restructured README with User/Developer guides, fixed relative links to CHANGELOG/AGENTS/OSX_BUILD, and added pointers to the latest release and GHCR image.
 
 ### Changed
 
