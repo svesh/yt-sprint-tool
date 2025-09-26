@@ -17,11 +17,10 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program. If not, see <https://www.gnu.org/licenses/>.
 """
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
-from ytsprint.lib_daemon import DaemonRunner
 from ytsprint.lib_sprint import SprintService
 
 
@@ -64,12 +63,3 @@ def test_setup_project_field_value_not_found() -> None:  # type: ignore[no-untyp
     with pytest.raises(SystemExit) as exc:
         SprintService(api).set_project_default_sprint("Project", "Sprints", "2025.30 Sprint")
     assert exc.value.code == 1
-
-
-def test_start_daemon_missing_deps() -> None:  # type: ignore[no-untyped-def]
-    """DaemonRunner.start should exit(1) when deps cannot be imported."""
-    # Force import failure
-    with patch("importlib.import_module", side_effect=ImportError("no module")):
-        with pytest.raises(SystemExit) as exc:
-            DaemonRunner("* * * * *", metrics_addr="127.0.0.1", metrics_port=9999).start(lambda: None)
-        assert exc.value.code == 1

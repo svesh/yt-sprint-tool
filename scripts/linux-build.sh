@@ -50,12 +50,11 @@ staticx dist/make-sprint dist/make-sprint-static
 staticx dist/default-sprint dist/default-sprint-static
 
 # Move to expected names
-mv -f dist/make-sprint-static "$DIST_DIR/make-sprint-linux-$OUT_ARCH"
-chmod +x "$DIST_DIR/make-sprint-linux-$OUT_ARCH" || true
+install -m 0755 dist/make-sprint-static "$DIST_DIR/make-sprint-linux-$OUT_ARCH"
+install -m 0755 dist/default-sprint-static "$DIST_DIR/default-sprint-linux-$OUT_ARCH"
 
-mv -f dist/default-sprint-static "$DIST_DIR/default-sprint-linux-$OUT_ARCH"
-chmod +x "$DIST_DIR/default-sprint-linux-$OUT_ARCH" || true
+# Remove intermediate binaries to keep the directory tidy
+rm -f dist/make-sprint dist/default-sprint dist/make-sprint-static dist/default-sprint-static
 
 echo "Done. Artifacts in $DIST_DIR:"
 ls -la "$DIST_DIR" | sed -n '1,200p'
-

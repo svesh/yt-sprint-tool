@@ -71,19 +71,19 @@ class SprintService:
         """
         board_id = self.yt.find_board_id(board_name)
         if not board_id:
-            logger.error("❌ Board '%s' not found", board_name)
+            logger.error("Board '%s' not found", board_name)
             raise SystemExit(1)
-        logger.info("✅ BOARD_ID = %s", board_id)
+        logger.info("BOARD_ID = %s", board_id)
 
         sprint_id = self.yt.find_sprint_id(board_id, sprint_name)
         if not sprint_id:
-            logger.info("🔨 Creating sprint '%s'", sprint_name)
+            logger.info("Creating sprint '%s'", sprint_name)
             sprint_data = {"name": sprint_name, "start_ms": start_ms, "finish_ms": finish_ms}
             sprint = self.yt.create_sprint(board_id, sprint_data)
             sprint_id = sprint.get("id")
         else:
-            logger.info("✅ Sprint '%s' already exists", sprint_name)
-        logger.info("✅ SPRINT_ID = %s", sprint_id)
+            logger.info("Sprint '%s' already exists", sprint_name)
+        logger.info("SPRINT_ID = %s", sprint_id)
 
     def set_project_default_sprint(self, project_name: str, field_name: str, sprint_name: str) -> Tuple[str, str]:
         """
@@ -100,13 +100,13 @@ class SprintService:
         Raises:
             SystemExit: If project, field or value are not found.
         """
-        logger.info("🎯 Setting default value for field '%s': %s", field_name, sprint_name)
+        logger.info("Setting default value for field '%s': %s", field_name, sprint_name)
 
         project_id = self.yt.find_project_id(project_name)
         if not project_id:
-            logger.error("❌ Project '%s' not found", project_name)
+            logger.error("Project '%s' not found", project_name)
             raise SystemExit(1)
-        logger.info("✅ PROJECT_ID = %s", project_id)
+        logger.info("PROJECT_ID = %s", project_id)
 
         fields = self.yt.get_project_fields(project_id)
         project_field = None
@@ -117,27 +117,27 @@ class SprintService:
                 break
 
         if not project_field:
-            logger.error("❌ Field '%s' not found in project '%s'", field_name, project_name)
+            logger.error("Field '%s' not found in project '%s'", field_name, project_name)
             raise SystemExit(1)
 
         project_field_id = project_field["id"]
         bundle = project_field.get("bundle", {})
         values = bundle.get("values", [])
 
-        logger.info("✅ PROJECT_FIELD_ID = %s", project_field_id)
+        logger.info("PROJECT_FIELD_ID = %s", project_field_id)
 
         value_id = self.yt.find_bundle_value_by_name(values, sprint_name)
         if not value_id:
             logger.error(
-                "❌ Value '%s' not found in bundle for field '%s' in project '%s'",
+                "Value '%s' not found in bundle for field '%s' in project '%s'",
                 sprint_name,
                 field_name,
                 project_name,
             )
             raise SystemExit(1)
-        logger.info("✅ Bundle value matched: %s -> %s", sprint_name, value_id)
+        logger.info("Bundle value matched: %s -> %s", sprint_name, value_id)
 
-        logger.info("🎯 Updating default values")
+        logger.info("Updating default values")
         self.yt.update_field_default_values(project_id, project_field_id, [value_id])
         return project_id, project_field_id
 
@@ -149,17 +149,17 @@ class SprintService:
             project_id (str): Project ID.
             field_id (str): Project field ID.
         """
-        logger.info("🔍 Verifying final setup...")
+        logger.info("Verifying final setup...")
         result = self.yt.get_field_defaults(project_id, field_id)
         field_name = result.get("field", {}).get("name", "N/A")
         defaults = result.get("defaultValues", [])
 
-        logger.info("✅ Field: %s", field_name)
+        logger.info("Field: %s", field_name)
         if defaults:
             for default in defaults:
-                logger.info("✅ Default value: %s (id: %s)", default.get("name"), default.get("id"))
+                logger.info("Default value: %s (id: %s)", default.get("name"), default.get("id"))
         else:
-            logger.warning("⚠️ No default values")
+            logger.warning("No default values")
 
     def ensure_future_sprints(self, board_name: str, base_year: int, base_week: int, count: int) -> None:
         """
@@ -179,7 +179,7 @@ class SprintService:
 
         board_id = self.yt.find_board_id(board_name)
         if not board_id:
-            logger.error("❌ Board '%s' not found", board_name)
+            logger.error("Board '%s' not found", board_name)
             raise SystemExit(1)
 
         base_monday = dt.date.fromisocalendar(base_year, base_week, 1)
@@ -190,9 +190,9 @@ class SprintService:
             _, _, start_ms, finish_ms = DateUtils.iso_week_range_utc(iso_year, iso_week)
 
             if self.yt.sprint_exists(board_id, sprint_name):
-                logger.info("✅ Future sprint exists: %s", sprint_name)
+                logger.info("Future sprint exists: %s", sprint_name)
                 continue
-            logger.info("🔨 Creating future sprint: %s", sprint_name)
+            logger.info("Creating future sprint: %s", sprint_name)
             self.yt.create_sprint(board_id, {"name": sprint_name, "start_ms": start_ms, "finish_ms": finish_ms})
 
     def run_sync_once(self, board: str, project: str, field: str, week: Optional[str], forward: int) -> None:
@@ -208,8 +208,8 @@ class SprintService:
         """
         year, week_num, sprint_name, monday, friday, start_ms, finish_ms = DateUtils.process_week_parameter(week)
 
-        logger.info("📅 Week: %s.%02d (%s - %s)", year, week_num, monday, friday)
-        logger.info("🏃 Sprint: %s", sprint_name)
+        logger.info("Week: %s.%02d (%s - %s)", year, week_num, monday, friday)
+        logger.info("Sprint: %s", sprint_name)
 
         self.ensure_sprint_on_board(board, sprint_name, start_ms, finish_ms)
         project_id, field_id = self.set_project_default_sprint(project, field, sprint_name)
@@ -230,20 +230,20 @@ class SprintService:
             SystemExit: If board is not found, or to return 0 when sprint exists.
         """
         year, week, sprint_name, monday, friday, start_ms, finish_ms = DateUtils.process_week_parameter(week_param)
-        logger.info("📅 Week: %s.%02d (%s - %s)", year, week, monday, friday)
-        logger.info("🏃 Sprint: %s", sprint_name)
+        logger.info("Week: %s.%02d (%s - %s)", year, week, monday, friday)
+        logger.info("Sprint: %s", sprint_name)
 
         board_id = self.yt.find_board_id(board_name)
         if not board_id:
-            logger.error("❌ Board '%s' not found", board_name)
+            logger.error("Board '%s' not found", board_name)
             raise SystemExit(1)
-        logger.info("✅ BOARD_ID = %s", board_id)
+        logger.info("BOARD_ID = %s", board_id)
 
         if self.yt.sprint_exists(board_id, sprint_name):
-            logger.warning("⚠️ Sprint '%s' already exists", sprint_name)
+            logger.warning("Sprint '%s' already exists", sprint_name)
             sys.exit(0)
 
         sprint_data = {"name": sprint_name, "start_ms": start_ms, "finish_ms": finish_ms}
         sprint = self.yt.create_sprint(board_id, sprint_data)
-        logger.info("✅ Created sprint: %s (ID: %s)", sprint.get("name"), sprint.get("id"))
-        logger.info("🎉 Done!")
+        logger.info("Created sprint: %s (ID: %s)", sprint.get("name"), sprint.get("id"))
+        logger.info("Done!")
