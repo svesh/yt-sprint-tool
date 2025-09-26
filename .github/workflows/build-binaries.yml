@@ -2,9 +2,8 @@ name: Build Binaries
 
 on:
   push:
-    branches: ['main']
+    branches: ['**']
     tags: ['v*']
-  pull_request:
   workflow_dispatch:
 
 permissions:
@@ -88,45 +87,37 @@ jobs:
           name: binaries-linux-${{ matrix.arch }}
           path: dist/ytsprint-linux-${{ matrix.arch }}
 
-  windows-amd64:
-    name: Windows amd64 (via Wine)
+  windows:
+    name: Windows (${{ matrix.arch }})
     runs-on: ubuntu-24.04
     needs: quality
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install Wine build deps
-        shell: bash
-        run: |
-          bash scripts/wine-install-deps.sh
-      - name: Build windows via Wine
-        shell: bash
-        run: |
-          bash scripts/wine-build.sh
-      - uses: actions/upload-artifact@v4
-        with:
-          name: binaries-windows-amd64
-          path: dist/ytsprint-windows-amd64.exe
-
-  windows-x86:
-    name: Windows x86 (via Wine)
-    runs-on: ubuntu-24.04
-    needs: quality
+    strategy:
+      matrix:
+        include:
+          - arch: amd64
+            wine_arch: amd64
+            artifact: ytsprint-windows-amd64.exe
+            artifact_name: binaries-windows-amd64
+          - arch: x86
+            wine_arch: x86
+            artifact: ytsprint-windows-x86.exe
+            artifact_name: binaries-windows-x86
     env:
-      WINE_TARGET_ARCH: x86
+      WINE_TARGET_ARCH: ${{ matrix.wine_arch }}
     steps:
       - uses: actions/checkout@v4
       - name: Install Wine build deps
         shell: bash
         run: |
           bash scripts/wine-install-deps.sh
-      - name: Build windows (x86) via Wine
+      - name: Build windows ${{ matrix.arch }} via Wine
         shell: bash
         run: |
           bash scripts/wine-build.sh
       - uses: actions/upload-artifact@v4
         with:
-          name: binaries-windows-x86
-          path: dist/ytsprint-windows-x86.exe
+          name: ${{ matrix.artifact_name }}
+          path: dist/${{ matrix.artifact }}
 
   macos:
     name: macOS (${{ matrix.arch }})
@@ -160,11 +151,17 @@ jobs:
           name: binaries-macos-${{ matrix.arch }}
           path: dist/ytsprint-macos-${{ matrix.arch }}
 
-  docker-image:
-    name: Docker Image
+  docker-build:
+    name: Docker Build (${{ matrix.arch }})
     needs: quality
-    if: github.event_name != 'pull_request'
     runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        include:
+          - arch: amd64
+            platform: linux/amd64
+          - arch: arm64
+            platform: linux/arm64
     permissions:
       contents: read
       packages: write
@@ -174,6 +171,65 @@ jobs:
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Prepare cache settings
+        id: cache
+        shell: bash
+        run: |
+          {
+            echo "cache_from=type=gha"
+            echo "cache_from_extra=type=registry,ref=ghcr.io/${{ github.repository_owner }}/yt-sprint-tool:buildcache"
+            echo "cache_to=type=gha,mode=max"
+            echo "cache_to_extra=type=registry,ref=ghcr.io/${{ github.repository_owner }}/yt-sprint-tool:buildcache,mode=max"
+          } >>"$GITHUB_OUTPUT"
+
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/yt-sprint-tool
+          tags: |
+            type=ref,event=branch
+            type=ref,event=tag
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
+          flavor: |
+            suffix=-${{ matrix.arch }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+
+      - name: Login to GHCR with GITHUB_TOKEN
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push (${{ matrix.platform }})
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          platforms: ${{ matrix.platform }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: |
+            ${{ steps.cache.outputs.cache_from }}
+            ${{ steps.cache.outputs.cache_from_extra }}
+          cache-to: |
+            ${{ steps.cache.outputs.cache_to }}
+            ${{ steps.cache.outputs.cache_to_extra }}
+
+  docker-manifest:
+    name: Docker Manifest
+    needs: docker-build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+    steps:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -193,25 +249,33 @@ jobs:
             type=ref,event=branch
             type=ref,event=tag
             type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
-          labels: |
-            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
 
-      - name: Build and push
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: true
-          platforms: linux/amd64,linux/arm64
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=registry,ref=ghcr.io/${{ github.repository_owner }}/yt-sprint-tool:buildcache
-          cache-to: type=registry,ref=ghcr.io/${{ github.repository_owner }}/yt-sprint-tool:buildcache,mode=max
+      - name: Create multi-arch manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          while IFS= read -r tag; do
+            [[ -z "$tag" ]] && continue
+            docker buildx imagetools create \
+              --tag "$tag" \
+              "${tag}-amd64" \
+              "${tag}-arm64"
+          done <<< "${{ steps.meta.outputs.tags }}"
+
+      - name: Inspect manifest
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          while IFS= read -r tag; do
+            [[ -z "$tag" ]] && continue
+            docker buildx imagetools inspect "$tag"
+          done <<< "${{ steps.meta.outputs.tags }}"
 
   release:
     name: Release (attach artifacts)
-    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-24.04
-    needs: [linux, windows-amd64, windows-x86, macos, docker-image]
+    needs: [linux, windows, macos, docker-manifest]
     steps:
       - name: Download artifacts
         uses: actions/download-artifact@v4
@@ -224,6 +288,7 @@ jobs:
           ls -la release
 
       - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
           files: |
