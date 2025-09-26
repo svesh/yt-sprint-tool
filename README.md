@@ -159,6 +159,7 @@ See AGENTS.md for contribution rules (patch-based edits; keep all checks green).
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
+# Linux only: install patchelf (e.g. sudo apt-get install patchelf)
 ```
 
 ### Run All Checks
@@ -169,29 +170,39 @@ bash scripts/linters.sh
 
 ### Local Build
 
-Preferred: Docker wrapper (stable, reproducible)
+#### Linux (native)
 
 ```bash
-bash scripts/build-with-docker.sh            # all
-bash scripts/build-with-docker.sh linux-amd64
-bash scripts/build-with-docker.sh linux-arm64
-bash scripts/build-with-docker.sh windows-amd64
-bash scripts/build-with-docker.sh windows-x86
-bash scripts/build-with-docker.sh runtime     # load runtime container image for local debugging
+# Builds dist/ytsprint-linux-<arch> (installs pyinstaller/staticx via pip)
+bash scripts/linux-build.sh
 ```
 
-Native (for development):
+#### Linux (Docker)
 
 ```bash
-# Linux (static)
-bash scripts/linux-install-deps.sh
-bash scripts/linux-build.sh
+bash scripts/build-linux-docker.sh            # amd64 + arm64 sequentially
+bash scripts/build-linux-docker.sh --arch amd64
+bash scripts/build-linux-docker.sh --arch arm64
+```
 
-# Windows (Wine on Linux)
-bash scripts/wine-install-deps.sh
-bash scripts/wine-build.sh
+#### Runtime Container
 
-# macOS (native on host arch)
+```bash
+# Requires binaries in ./dist (see Linux build steps)
+bash scripts/build-runtime.sh                  # host architecture
+bash scripts/build-runtime.sh --arch arm64
+bash scripts/build-runtime.sh --multi         # creates dist/ytsprint-runtime-multi.oci
+```
+
+#### Windows (native PowerShell)
+
+```powershell
+pwsh -File scripts/windows-build.ps1          # emits dist/ytsprint-windows-x64/x86.exe based on Python
+```
+
+#### macOS (native)
+
+```bash
 bash scripts/macos-build.sh
 ```
 
@@ -212,14 +223,27 @@ On macOS, see local Docker setup and notes in [OSX_BUILD.md](OSX_BUILD.md).
 ./dist/ytsprint-linux-amd64 --create --board "My Board" --week "2025.32"
 ./dist/ytsprint-linux-amd64 --board "My Board" --project "My Project"
 
-# Windows (amd64)
-./dist/ytsprint-windows-amd64.exe --create --board "My Board" --week "2025.32"
-./dist/ytsprint-windows-amd64.exe --board "My Board" --project "My Project"
+# Windows (x64)
+./dist/ytsprint-windows-x64.exe --create --board "My Board" --week "2025.32"
+./dist/ytsprint-windows-x64.exe --board "My Board" --project "My Project"
 
 # Windows (x86)
 ./dist/ytsprint-windows-x86.exe --create --board "My Board" --week "2025.32"
 ./dist/ytsprint-windows-x86.exe --board "My Board" --project "My Project"
 ```
+
+### Script Reference
+
+- `scripts/linux-build.sh` — builds Linux binary via PyInstaller + staticx using the active Python environment.
+- `scripts/build-linux-docker.sh` — builds Linux binaries via Docker (`Dockerfile.build`).
+- `scripts/build-runtime.sh` — assembles the runtime container image (single architecture or multi-arch OCI archive).
+- `scripts/windows-build.ps1` — builds Windows executable (auto-detects Python architecture).
+- `scripts/macos-build.sh` — builds macOS artifact on the host architecture.
+- `scripts/linters.sh` — runs linting and test suites.
+
+#### Internal Scripts
+
+- `scripts/internal/prepare-linux-deps.sh` — installs system packages for Linux builds (used in CI and Docker builder stages).
 
 ## Authors and Contributors
 

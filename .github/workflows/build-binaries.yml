@@ -77,7 +77,7 @@ jobs:
       - name: Install Linux build deps
         shell: bash
         run: |
-          bash scripts/linux-install-deps.sh
+          bash scripts/internal/prepare-linux-deps.sh
       - name: Build linux ${{ matrix.arch }}
         shell: bash
         run: |
@@ -89,31 +89,36 @@ jobs:
 
   windows:
     name: Windows (${{ matrix.arch }})
-    runs-on: ubuntu-24.04
+    runs-on: windows-latest
     needs: quality
     strategy:
       matrix:
         include:
-          - arch: amd64
-            wine_arch: amd64
-            artifact: ytsprint-windows-amd64.exe
-            artifact_name: binaries-windows-amd64
+          - arch: x64
+            python_arch: x64
+            artifact: ytsprint-windows-x64.exe
+            artifact_name: binaries-windows-x64
           - arch: x86
-            wine_arch: x86
+            python_arch: x86
             artifact: ytsprint-windows-x86.exe
             artifact_name: binaries-windows-x86
-    env:
-      WINE_TARGET_ARCH: ${{ matrix.wine_arch }}
     steps:
       - uses: actions/checkout@v4
-      - name: Install Wine build deps
-        shell: bash
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          architecture: ${{ matrix.python_arch }}
+      - name: Install dependencies
+        shell: pwsh
         run: |
-          bash scripts/wine-install-deps.sh
-      - name: Build windows ${{ matrix.arch }} via Wine
-        shell: bash
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+      - name: Build Windows binary
+        shell: pwsh
         run: |
-          bash scripts/wine-build.sh
+          ./scripts/windows-build.ps1
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact_name }}
@@ -153,20 +158,37 @@ jobs:
 
   docker-build:
     name: Docker Build (${{ matrix.arch }})
-    needs: quality
+    needs: [linux]
     runs-on: ubuntu-24.04
     strategy:
       matrix:
         include:
           - arch: amd64
             platform: linux/amd64
+            artifact_name: binaries-linux-amd64
+            binary: ytsprint-linux-amd64
           - arch: arm64
             platform: linux/arm64
+            artifact_name: binaries-linux-arm64
+            binary: ytsprint-linux-arm64
     permissions:
       contents: read
       packages: write
     steps:
       - uses: actions/checkout@v4
+
+      - name: Download Linux binary
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: runtime
+
+      - name: Stage binary for runtime build
+        shell: bash
+        run: |
+          mkdir -p dist
+          mv "runtime/${{ matrix.binary }}" "dist/${{ matrix.binary }}"
+          rm -rf runtime
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -211,6 +233,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
+          file: Dockerfile
           push: true
           platforms: ${{ matrix.platform }}
           tags: ${{ steps.meta.outputs.tags }}
@@ -277,15 +300,45 @@ jobs:
     runs-on: ubuntu-24.04
     needs: [linux, windows, macos, docker-manifest]
     steps:
-      - name: Download artifacts
+      - name: Download linux-amd64
         uses: actions/download-artifact@v4
         with:
+          name: binaries-linux-amd64
           path: release
-          merge-multiple: true
+
+      - name: Download linux-arm64
+        uses: actions/download-artifact@v4
+        with:
+          name: binaries-linux-arm64
+          path: release
+
+      - name: Download windows-x64
+        uses: actions/download-artifact@v4
+        with:
+          name: binaries-windows-x64
+          path: release
+
+      - name: Download windows-x86
+        uses: actions/download-artifact@v4
+        with:
+          name: binaries-windows-x86
+          path: release
+
+      - name: Download macos-arm64
+        uses: actions/download-artifact@v4
+        with:
+          name: binaries-macos-arm64
+          path: release
+
+      - name: Download macos-x86_64
+        uses: actions/download-artifact@v4
+        with:
+          name: binaries-macos-x86_64
+          path: release
 
       - name: List artifacts
         run: |
-          ls -la release
+          ls -R release
 
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')
@@ -294,7 +347,7 @@ jobs:
           files: |
             release/ytsprint-linux-amd64
             release/ytsprint-linux-arm64
-            release/ytsprint-windows-amd64.exe
+            release/ytsprint-windows-x64.exe
             release/ytsprint-windows-x86.exe
             release/ytsprint-macos-arm64
             release/ytsprint-macos-x86_64

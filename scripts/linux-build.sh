@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Build Linux binaries natively (no Docker) using PyInstaller
-# and always wrap with staticx for static executables.
+# Build Linux binaries using PyInstaller + staticx.
 # Output: dist/ytsprint-linux-<arch>
 
 DIST_DIR="dist"
@@ -23,23 +22,23 @@ case "$UNAME_M" in
     ;;
 esac
 
-if [[ ! -d .venv ]]; then
-  echo ".venv not found. Run scripts/linux-install-deps.sh first." >&2
-  exit 2
+PYTHON_BIN="${PYTHON_BIN:-python}"
+if ! command -v "$PYTHON_BIN" >/dev/null 2>&1; then
+  if command -v python3 >/dev/null 2>&1; then
+    PYTHON_BIN="python3"
+  else
+    echo "Python interpreter not found. Install python3 first." >&2
+    exit 1
+  fi
 fi
-source .venv/bin/activate
 
-if ! command -v pyinstaller >/dev/null 2>&1; then
-  echo "pyinstaller not found in .venv. Run scripts/linux-install-deps.sh." >&2
-  exit 2
-fi
-if ! command -v staticx >/dev/null 2>&1; then
-  echo "staticx not found in .venv. Run scripts/linux-install-deps.sh." >&2
-  exit 2
-fi
+echo "Installing build dependencies via pip (pyinstaller, staticx)..."
+"$PYTHON_BIN" -m pip install --upgrade pip >/dev/null
+"$PYTHON_BIN" -m pip install -r requirements.txt >/dev/null
+"$PYTHON_BIN" -m pip install pyinstaller staticx >/dev/null
 
 # Clean previous build artifacts
-rm -rf build dist/*.spec || true
+rm -rf build ytsprint.spec dist/ytsprint dist/ytsprint-static || true
 
 echo "Building Linux binary for arch=$OUT_ARCH..."
 pyinstaller --onefile --clean --name ytsprint ytsprint/cli.py
@@ -47,11 +46,9 @@ pyinstaller --onefile --clean --name ytsprint ytsprint/cli.py
 echo "Wrapping binary with staticx..."
 staticx dist/ytsprint dist/ytsprint-static
 
-# Move to expected name
-install -m 0755 dist/ytsprint-static "$DIST_DIR/ytsprint-linux-$OUT_ARCH"
+TARGET_PATH="$DIST_DIR/ytsprint-linux-$OUT_ARCH"
+mv -f dist/ytsprint-static "$TARGET_PATH"
+chmod 0755 "$TARGET_PATH"
+rm -f dist/ytsprint
 
-# Remove intermediate binaries to keep the directory tidy
-rm -f dist/ytsprint dist/ytsprint-static
-
-echo "Done. Artifacts in $DIST_DIR:"
-ls -la "$DIST_DIR" | sed -n '1,200p'
+echo "Linux binary available at $TARGET_PATH"

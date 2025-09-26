@@ -58,3 +58,11 @@ Dockerfile
 *.bak
 *_old.py
 *.sh
+
+# Allow build scripts and runtime artifacts for Docker builds
+!scripts/*.sh
+!scripts/*.ps1
+!scripts/**/*.sh
+!dist/ytsprint-linux-*
+!Dockerfile
+!Dockerfile.build
