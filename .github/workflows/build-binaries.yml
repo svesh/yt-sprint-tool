@@ -117,16 +117,9 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: requirements.txt
           architecture: ${{ matrix.python_arch }}
-      - name: Cache pip (Windows)
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~\AppData\Local\pip\Cache
-          key: ${{ runner.os }}-${{ matrix.python_arch }}-pip-${{ hashFiles('requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ matrix.python_arch }}-pip-
-            ${{ runner.os }}-pip-
       - name: Install dependencies
         shell: pwsh
         run: |
@@ -157,15 +150,8 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Cache pip (macOS)
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/Library/Caches/pip
-          key: ${{ runner.os }}-${{ matrix.arch }}-pip-${{ hashFiles('requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ matrix.arch }}-pip-
-            ${{ runner.os }}-pip-
+          cache: 'pip'
+          cache-dependency-path: requirements.txt
       - name: Create venv and install deps
         shell: bash
         run: |
