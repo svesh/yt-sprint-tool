@@ -17,8 +17,8 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-This module contains common functions for working with YouTrack API,
-used in make_sprint.py and default_sprint.py.
+This module contains common functions for working with the YouTrack API,
+used by the sprint services and the unified `ytsprint` CLI.
 """
 
 import logging

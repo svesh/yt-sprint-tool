@@ -18,15 +18,22 @@ You should have received a copy of the GNU General Public License
 along with this program. If not, see <https://www.gnu.org/licenses/>.
 """
 
+import io
+import os
+import tempfile
 import unittest
+from contextlib import redirect_stdout
+from pathlib import Path
 
 from ytsprint.version import (
     AUTHOR,
     AUTHOR_EMAIL,
+    CLI_DESCRIPTION,
     LICENSE,
     PROJECT_NAME,
     PROJECT_URL,
     VERSION,
+    generate_windows_version_files,
     generate_windows_version_info,
     get_version_for_argparse,
 )
@@ -90,30 +97,48 @@ class TestVersionInfo(unittest.TestCase):
         self.assertIn("Test Product", win_info)
 
     def test_argparse_version_format(self):
-        """Test version format for argparse"""
-        make_version = get_version_for_argparse("make-sprint")
-        default_version = get_version_for_argparse("default-sprint")
+        """Version flag renders single-line description with metadata."""
+        version_str = get_version_for_argparse("ytsprint")
 
-        # Check that version is in single-line format
-        self.assertNotIn("\n", make_version)
-        self.assertNotIn("\n", default_version)
-
-        # Check presence of key elements
-        for version_str in [make_version, default_version]:
-            self.assertIn(PROJECT_NAME, version_str)
-            self.assertIn(VERSION, version_str)
-            self.assertIn(AUTHOR, version_str)
-            self.assertIn(LICENSE, version_str)
-            self.assertIn(PROJECT_URL, version_str)
-            self.assertIn("|", version_str)  # Separators
+        self.assertNotIn("\n", version_str)
+        self.assertIn(PROJECT_NAME, version_str)
+        self.assertIn(VERSION, version_str)
+        self.assertIn(AUTHOR, version_str)
+        self.assertIn(LICENSE, version_str)
+        self.assertIn(PROJECT_URL, version_str)
+        self.assertIn(CLI_DESCRIPTION, version_str)
+        self.assertIn("|", version_str)
 
     def test_version_contains_gpl_license(self):
-        """Test that version output contains GPL-3.0 license"""
-        make_version = get_version_for_argparse("make-sprint")
-        default_version = get_version_for_argparse("default-sprint")
+        """Version output mentions the GPL license."""
+        version_str = get_version_for_argparse("ytsprint")
+        self.assertIn("GPL-3.0", version_str)
 
-        for version_str in [make_version, default_version]:
-            self.assertIn("GPL-3.0", version_str, "Version output should contain GPL-3.0 license")
+    def test_generate_windows_version_files(self) -> None:
+        """generate_windows_version_files should write artifacts with metadata."""
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            original_cwd = os.getcwd()
+            try:
+                os.chdir(tmpdir)
+                buffer = io.StringIO()
+                with redirect_stdout(buffer):
+                    generate_windows_version_files()
+
+                output = buffer.getvalue()
+                self.assertIn("ytsprint_version.py", output)
+
+                version_path = Path(tmpdir) / "ytsprint_version.py"
+
+                self.assertTrue(version_path.exists())
+
+                contents = version_path.read_text(encoding="utf-8")
+
+                self.assertIn(CLI_DESCRIPTION, contents)
+                self.assertIn(VERSION.replace(".", ","), contents)
+                self.assertIn(AUTHOR_EMAIL, contents)
+            finally:
+                os.chdir(original_cwd)
 
 
 if __name__ == "__main__":

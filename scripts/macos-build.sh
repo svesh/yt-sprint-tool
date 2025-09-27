@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Build macOS native binaries for the current host arch (arm64 or x86_64)
+# Build macOS native binary for the current host arch (arm64 or x86_64)
 # Author: Sergei Sveshnikov (svesh87@gmail.com)
-# Outputs: dist/make-sprint-macos-<arch>, dist/default-sprint-macos-<arch>
+# Output: dist/ytsprint-macos-<arch>
 
 DIST_DIR="dist"
 mkdir -p "$DIST_DIR"
@@ -41,15 +41,13 @@ case "$HOST_UNAME_ARCH" in
     ;;
 esac
 
-echo "Building macOS native binaries for $TARGET_ARCH_FLAG..."
+echo "Building macOS native binary for $TARGET_ARCH_FLAG..."
 
 rm -rf build dist/*.spec || true
 
-pyinstaller --onefile --clean --target-arch "$TARGET_ARCH_FLAG" --name make-sprint ytsprint/make_sprint.py
-pyinstaller --onefile --clean --target-arch "$TARGET_ARCH_FLAG" --name default-sprint ytsprint/default_sprint.py
+pyinstaller --onefile --clean --target-arch "$TARGET_ARCH_FLAG" --name ytsprint ytsprint/cli.py
 
-mv -f dist/make-sprint "$DIST_DIR/make-sprint-$OUT_SUFFIX"
-mv -f dist/default-sprint "$DIST_DIR/default-sprint-$OUT_SUFFIX"
+mv -f dist/ytsprint "$DIST_DIR/ytsprint-$OUT_SUFFIX"
 
 echo "macOS native build completed. Artifacts in $DIST_DIR:"
 ls -la "$DIST_DIR" | sed -n '1,200p'

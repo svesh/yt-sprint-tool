@@ -1,0 +1,30 @@
+# Builder Dockerfile for producing Linux binaries via PyInstaller/staticx.
+
+FROM ubuntu:24.04 AS builder
+
+WORKDIR /app
+
+# Provide architecture context (used by scripts/linux-build.sh)
+ARG TARGETARCH
+ENV TARGETARCH=${TARGETARCH}
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        bash \
+        curl \
+        ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt ./requirements.txt
+COPY scripts/internal ./scripts/internal
+
+RUN bash scripts/internal/prepare-linux-deps.sh
+
+COPY scripts/linux-build.sh ./scripts/linux-build.sh
+
+COPY ytsprint ./ytsprint
+
+RUN bash scripts/linux-build.sh
+
+FROM scratch AS export
+COPY --from=builder /app/dist/ /

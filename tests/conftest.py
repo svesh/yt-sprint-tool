@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 """Common pytest fixtures and test configuration."""
+from __future__ import annotations
+
 import os
 import sys
 
@@ -11,7 +13,7 @@ if ROOT not in sys.path:
 
 
 @pytest.fixture(autouse=True)
-def clear_youtrack_env(monkeypatch):  # type: ignore[no-untyped-def]
+def clear_youtrack_env(monkeypatch: pytest.MonkeyPatch) -> None:
     """Remove YouTrack credentials from the environment for every test."""
 
     for key in (

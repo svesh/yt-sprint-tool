@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Error path tests for default_sprint helpers.
+Error path tests for SprintService helpers.
 
 Copyright (C) 2025 Sergei Sveshnikov
 

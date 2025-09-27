@@ -5,6 +5,33 @@ All notable changes to YT Sprint Tool will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0] - 2025-09-27
+
+### Added
+
+- Test coverage for the unified CLI, sprint service helpers, and daemon runner to keep each module above 80% coverage.
+- Native Windows build script (`scripts/windows-build.ps1`) used by CI and local developers for x64 and x86 executables.
+- Documentation: restructured README with User/Developer guides, fixed relative links to CHANGELOG/AGENTS/OSX_BUILD, and added pointers to the latest release and GHCR image.
+
+### Changed
+
+- Replaced the `make-sprint` and `default-sprint` binaries with a single `ytsprint` executable that provides `--sync` (default) and `--create` modes.
+- Updated build scripts, Docker packaging, and documentation to describe the unified CLI flow and artifacts.
+- Local Docker helper (`scripts/build-linux-docker.sh`) targets Linux binaries, while `scripts/build-runtime.sh`
+  assembles runtime images (single-arch or multi-arch OCI archives).
+- Runtime Dockerfile copies binaries after dependency layers, exposes the Prometheus port, and uses cached
+  system layers across architectures.
+- Runtime Docker image builds consume pre-built binaries (dist locally, Linux artifacts in CI) and publish
+  multi-architecture manifests in parallel Docker jobs.
+- CI: enabled pip caching in Quality, Windows, and macOS jobs via actions/setup-python cache with `requirements.txt` as dependency path.
+- CI: added explicit pip cache for Linux job using actions/cache on `~/.cache/pip`, keyed by `requirements.txt` and `scripts/internal/prepare-linux-deps.sh`.
+- Build time: faster repeat builds across OSes; no changes to produced artifacts or runtime behaviour.
+
+### Removed
+
+- Deprecated modules `ytsprint/make_sprint.py`, `ytsprint/default_sprint.py`, and their dedicated CLI tests.
+- Wine-based Windows build scripts and Docker support in favour of native Windows runners.
+
 ## [2.0.1] - 2025-09-26
 
 ### Added

@@ -18,10 +18,21 @@ You should have received a copy of the GNU General Public License
 along with this program. If not, see <https://www.gnu.org/licenses/>.
 """
 
+from __future__ import annotations
+
 import unittest
+from typing import Any, Dict, Tuple, TypedDict, cast
 from unittest.mock import MagicMock, patch
 
 from ytsprint import lib_date_utils, lib_yt_api
+
+
+class SprintData(TypedDict):
+    """Typed representation of sprint payload used in API calls."""
+
+    name: str
+    start_ms: int
+    finish_ms: int
 
 
 class TestDateUtils(unittest.TestCase):
@@ -105,9 +116,9 @@ class TestYouTrackAPI(unittest.TestCase):
         self.assertEqual(api.base_url, "http://test.com")
 
     @patch("ytsprint.lib_yt_api.requests.get")
-    def test_get(self, mock_get):
+    def test_get(self, mock_get: MagicMock) -> None:
         """Test GET request."""
-        mock_response = MagicMock()
+        mock_response: MagicMock = MagicMock()
         mock_response.status_code = 200
         mock_response.json.return_value = {"test": "data"}
         mock_response.raise_for_status.return_value = None
@@ -118,9 +129,9 @@ class TestYouTrackAPI(unittest.TestCase):
         self.assertEqual(result, {"test": "data"})
 
     @patch("ytsprint.lib_yt_api.requests.get")
-    def test_get_with_params(self, mock_get):
+    def test_get_with_params(self, mock_get: MagicMock) -> None:
         """Test GET request with parameters."""
-        mock_response = MagicMock()
+        mock_response: MagicMock = MagicMock()
         mock_response.status_code = 200
         mock_response.json.return_value = {"test": "data"}
         mock_response.raise_for_status.return_value = None
@@ -128,14 +139,14 @@ class TestYouTrackAPI(unittest.TestCase):
 
         self.api.get("/api/test", params={"fields": "id,name"})
         mock_get.assert_called_once()
-        _, kwargs = mock_get.call_args
+        _, kwargs = cast(Tuple[Tuple[Any, ...], Dict[str, Any]], mock_get.call_args)
         self.assertIn("params", kwargs)
         self.assertEqual(kwargs["params"], {"fields": "id,name"})
 
     @patch("ytsprint.lib_yt_api.requests.post")
-    def test_post(self, mock_post):
+    def test_post(self, mock_post: MagicMock) -> None:
         """Test POST request."""
-        mock_response = MagicMock()
+        mock_response: MagicMock = MagicMock()
         mock_response.status_code = 200
         mock_response.json.return_value = {"created": "data"}
         mock_response.raise_for_status.return_value = None
@@ -146,9 +157,9 @@ class TestYouTrackAPI(unittest.TestCase):
         self.assertEqual(result, {"created": "data"})
 
     @patch("ytsprint.lib_yt_api.requests.delete")
-    def test_delete_success(self, mock_delete):
+    def test_delete_success(self, mock_delete: MagicMock) -> None:
         """Test DELETE request (successful)."""
-        mock_response = MagicMock()
+        mock_response: MagicMock = MagicMock()
         mock_response.status_code = 204
         mock_delete.return_value = mock_response
 
@@ -157,9 +168,9 @@ class TestYouTrackAPI(unittest.TestCase):
         mock_delete.assert_called_once()
 
     @patch("ytsprint.lib_yt_api.requests.delete")
-    def test_delete_not_found(self, mock_delete):
+    def test_delete_not_found(self, mock_delete: MagicMock) -> None:
         """Test DELETE request (404 - not found)."""
-        mock_response = MagicMock()
+        mock_response: MagicMock = MagicMock()
         mock_response.status_code = 404
         mock_delete.return_value = mock_response
 
@@ -168,9 +179,9 @@ class TestYouTrackAPI(unittest.TestCase):
         mock_delete.assert_called_once()
 
     @patch("ytsprint.lib_yt_api.requests.delete")
-    def test_delete_error_raises(self, mock_delete):
+    def test_delete_error_raises(self, mock_delete: MagicMock) -> None:
         """Test DELETE request errors propagate via raise_for_status."""
-        mock_response = MagicMock()
+        mock_response: MagicMock = MagicMock()
         mock_response.status_code = 500
         mock_response.raise_for_status.side_effect = Exception("HTTP 500")
         mock_delete.return_value = mock_response
@@ -179,9 +190,9 @@ class TestYouTrackAPI(unittest.TestCase):
             self.api.delete("/api/test")
 
     @patch("ytsprint.lib_yt_api.requests.get")
-    def test_find_board_id_found(self, mock_get):
+    def test_find_board_id_found(self, mock_get: MagicMock) -> None:
         """Test board ID search (found)."""
-        mock_response = MagicMock()
+        mock_response: MagicMock = MagicMock()
         mock_response.status_code = 200
         mock_response.json.return_value = [
             {"id": "board1", "name": "Test Board"},
@@ -194,9 +205,9 @@ class TestYouTrackAPI(unittest.TestCase):
         self.assertEqual(board_id, "board1")
 
     @patch("ytsprint.lib_yt_api.requests.get")
-    def test_find_board_id_not_found(self, mock_get):
+    def test_find_board_id_not_found(self, mock_get: MagicMock) -> None:
         """Test board ID search (not found)."""
-        mock_response = MagicMock()
+        mock_response: MagicMock = MagicMock()
         mock_response.status_code = 200
         mock_response.json.return_value = [
             {"id": "board1", "name": "Test Board"},
@@ -209,9 +220,9 @@ class TestYouTrackAPI(unittest.TestCase):
         self.assertIsNone(board_id)
 
     @patch("ytsprint.lib_yt_api.requests.get")
-    def test_sprint_exists_true(self, mock_get):
+    def test_sprint_exists_true(self, mock_get: MagicMock) -> None:
         """Test sprint existence check (exists)."""
-        mock_response = MagicMock()
+        mock_response: MagicMock = MagicMock()
         mock_response.status_code = 200
         mock_response.json.return_value = [
             {"id": "sprint1", "name": "2025.32 Sprint"},
@@ -224,9 +235,9 @@ class TestYouTrackAPI(unittest.TestCase):
         self.assertTrue(exists)
 
     @patch("ytsprint.lib_yt_api.requests.get")
-    def test_sprint_exists_false(self, mock_get):
+    def test_sprint_exists_false(self, mock_get: MagicMock) -> None:
         """Test sprint existence check (does not exist)."""
-        mock_response = MagicMock()
+        mock_response: MagicMock = MagicMock()
         mock_response.status_code = 200
         mock_response.json.return_value = [{"id": "sprint1", "name": "2025.33 Sprint"}]
         mock_response.raise_for_status.return_value = None
@@ -236,28 +247,28 @@ class TestYouTrackAPI(unittest.TestCase):
         self.assertFalse(exists)
 
     @patch("ytsprint.lib_yt_api.requests.post")
-    def test_create_sprint(self, mock_post):
+    def test_create_sprint(self, mock_post: MagicMock) -> None:
         """Test sprint creation."""
-        mock_response = MagicMock()
+        mock_response: MagicMock = MagicMock()
         mock_response.status_code = 200
         mock_response.json.return_value = {"id": "sprint123", "name": "Sprint 1"}
         mock_response.raise_for_status.return_value = None
         mock_post.return_value = mock_response
 
-        sprint_data = {"name": "Sprint 1", "start_ms": 1672531200000, "finish_ms": 1673135999000}
-        result = self.api.create_sprint("board123", sprint_data)
+        sprint_data: SprintData = {"name": "Sprint 1", "start_ms": 1672531200000, "finish_ms": 1673135999000}
+        result = self.api.create_sprint("board123", dict(sprint_data))
 
         mock_post.assert_called_once()
-        _, kwargs = mock_post.call_args
+        _, kwargs = cast(Tuple[Tuple[Any, ...], Dict[str, Any]], mock_post.call_args)
         self.assertIn("json", kwargs)
         expected_payload = {"name": "Sprint 1", "start": 1672531200000, "finish": 1673135999000}
         self.assertEqual(kwargs["json"], expected_payload)
         self.assertEqual(result, {"id": "sprint123", "name": "Sprint 1"})
 
     @patch("ytsprint.lib_yt_api.requests.get")
-    def test_find_sprint_id_found(self, mock_get):
+    def test_find_sprint_id_found(self, mock_get: MagicMock) -> None:
         """Test sprint ID search (found)."""
-        mock_response = MagicMock()
+        mock_response: MagicMock = MagicMock()
         mock_response.status_code = 200
         mock_response.json.return_value = [
             {"id": "sprint1", "name": "2025.32 Sprint"},
@@ -270,9 +281,9 @@ class TestYouTrackAPI(unittest.TestCase):
         self.assertEqual(sprint_id, "sprint1")
 
     @patch("ytsprint.lib_yt_api.requests.get")
-    def test_find_sprint_id_not_found(self, mock_get):
+    def test_find_sprint_id_not_found(self, mock_get: MagicMock) -> None:
         """Test sprint ID search (not found)."""
-        mock_response = MagicMock()
+        mock_response: MagicMock = MagicMock()
         mock_response.status_code = 200
         mock_response.json.return_value = [{"id": "sprint1", "name": "2025.33 Sprint"}]
         mock_response.raise_for_status.return_value = None
@@ -282,9 +293,9 @@ class TestYouTrackAPI(unittest.TestCase):
         self.assertIsNone(sprint_id)
 
     @patch("ytsprint.lib_yt_api.requests.get")
-    def test_find_project_id_found(self, mock_get):
+    def test_find_project_id_found(self, mock_get: MagicMock) -> None:
         """Test project ID search (found)."""
-        mock_response = MagicMock()
+        mock_response: MagicMock = MagicMock()
         mock_response.status_code = 200
         mock_response.json.return_value = [
             {"id": "proj1", "name": "Test Project"},
@@ -297,9 +308,9 @@ class TestYouTrackAPI(unittest.TestCase):
         self.assertEqual(project_id, "proj1")
 
     @patch("ytsprint.lib_yt_api.requests.get")
-    def test_find_project_id_not_found(self, mock_get):
+    def test_find_project_id_not_found(self, mock_get: MagicMock) -> None:
         """Test project ID search (not found)."""
-        mock_response = MagicMock()
+        mock_response: MagicMock = MagicMock()
         mock_response.status_code = 200
         mock_response.json.return_value = [{"id": "proj1", "name": "Test Project"}]
         mock_response.raise_for_status.return_value = None
@@ -311,7 +322,8 @@ class TestYouTrackAPI(unittest.TestCase):
     def test_get_field_defaults(self) -> None:
         """Test getting field defaults wrapper."""
         expected = {"field": {"name": "Sprints"}, "defaultValues": [{"id": "x", "name": "2025.30 Sprint"}]}
-        with patch.object(self.api, "get", return_value=expected) as mock_get:
+        with patch.object(self.api, "get", return_value=expected) as mocked_get:
+            mock_get = cast(MagicMock, mocked_get)
             result = self.api.get_field_defaults("proj", "field")
             self.assertEqual(result, expected)
             mock_get.assert_called_once()
@@ -319,9 +331,12 @@ class TestYouTrackAPI(unittest.TestCase):
     def test_update_field_default_values_flow(self) -> None:
         """Test full flow of updating defaults (no HTTP errors)."""
         defaults = [{"id": "old1"}, {"id": None}]
-        with patch.object(self.api, "get", return_value=defaults) as mock_get, \
-            patch.object(self.api, "delete", return_value=204) as mock_delete, \
-            patch.object(self.api, "post", return_value=None) as mock_post:
+        with patch.object(self.api, "get", return_value=defaults) as mocked_get, \
+            patch.object(self.api, "delete", return_value=204) as mocked_delete, \
+            patch.object(self.api, "post", return_value=None) as mocked_post:
+            mock_get = cast(MagicMock, mocked_get)
+            mock_delete = cast(MagicMock, mocked_delete)
+            mock_post = cast(MagicMock, mocked_post)
             self.api.update_field_default_values("proj", "field", ["new1", "new2"])
             mock_get.assert_called_once()
             mock_delete.assert_called_once()  # only one valid id
@@ -343,7 +358,7 @@ class TestIntegration(unittest.TestCase):
         )
 
         # Create sprint_data as in real code
-        sprint_data = {"name": sprint_name, "start_ms": start_ms, "finish_ms": finish_ms}
+        sprint_data: SprintData = {"name": sprint_name, "start_ms": start_ms, "finish_ms": finish_ms}
 
         # Check that data is correct
         self.assertEqual(sprint_data["name"], "2025.30 Sprint")

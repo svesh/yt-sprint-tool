@@ -4,7 +4,6 @@ on:
   push:
     branches: ['**']
     tags: ['v*']
-  pull_request:
   workflow_dispatch:
 
 permissions:
@@ -22,12 +21,12 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: requirements.txt
 
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install pyright isort pymarkdownlnt yamllint
 
       - name: pylint
         run: |
@@ -75,10 +74,19 @@ jobs:
             arch: arm64
     steps:
       - uses: actions/checkout@v4
+      - name: Cache pip (Linux)
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/pip
+          key: ${{ runner.os }}-${{ matrix.arch }}-pip-${{ hashFiles('requirements.txt', 'scripts/internal/prepare-linux-deps.sh') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.arch }}-pip-
+            ${{ runner.os }}-pip-
       - name: Install Linux build deps
         shell: bash
         run: |
-          bash scripts/linux-install-deps.sh
+          bash scripts/internal/prepare-linux-deps.sh
       - name: Build linux ${{ matrix.arch }}
         shell: bash
         run: |
@@ -86,30 +94,44 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: binaries-linux-${{ matrix.arch }}
-          path: |
-            dist/make-sprint-linux-${{ matrix.arch }}
-            dist/default-sprint-linux-${{ matrix.arch }}
+          path: dist/ytsprint-linux-${{ matrix.arch }}
 
-  windows-amd64:
-    name: Windows amd64 (via Wine)
-    runs-on: ubuntu-24.04
+  windows:
+    name: Windows (${{ matrix.arch }})
+    runs-on: windows-latest
     needs: quality
+    strategy:
+      matrix:
+        include:
+          - arch: x64
+            python_arch: x64
+            artifact: ytsprint-windows-x64.exe
+            artifact_name: binaries-windows-x64
+          - arch: x86
+            python_arch: x86
+            artifact: ytsprint-windows-x86.exe
+            artifact_name: binaries-windows-x86
     steps:
       - uses: actions/checkout@v4
-      - name: Install Wine build deps
-        shell: bash
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: requirements.txt
+          architecture: ${{ matrix.python_arch }}
+      - name: Install dependencies
+        shell: pwsh
         run: |
-          bash scripts/wine-install-deps.sh
-      - name: Build windows via Wine
-        shell: bash
+          pip install -r requirements.txt
+      - name: Build Windows binary
+        shell: pwsh
         run: |
-          bash scripts/wine-build.sh
+          ./scripts/windows-build.ps1
       - uses: actions/upload-artifact@v4
         with:
-          name: binaries-windows-amd64
-          path: |
-            dist/make-sprint-windows-amd64.exe
-            dist/default-sprint-windows-amd64.exe
+          name: ${{ matrix.artifact_name }}
+          path: dist/${{ matrix.artifact }}
 
   macos:
     name: macOS (${{ matrix.arch }})
@@ -128,37 +150,118 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: requirements.txt
       - name: Create venv and install deps
         shell: bash
         run: |
           python -m venv .venv
           source .venv/bin/activate
-          python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install pyinstaller
           scripts/macos-build.sh
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: binaries-macos-${{ matrix.arch }}
-          path: |
-            dist/make-sprint-macos-${{ matrix.arch }}
-            dist/default-sprint-macos-${{ matrix.arch }}
+          path: dist/ytsprint-macos-${{ matrix.arch }}
 
-  docker-image:
-    name: Docker Image
-    needs: quality
-    if: github.event_name != 'pull_request'
+  docker-build:
+    name: Docker Build (${{ matrix.arch }})
+    needs: [linux]
     runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        include:
+          - arch: amd64
+            platform: linux/amd64
+            artifact_name: binaries-linux-amd64
+            binary: ytsprint-linux-amd64
+          - arch: arm64
+            platform: linux/arm64
+            artifact_name: binaries-linux-arm64
+            binary: ytsprint-linux-arm64
     permissions:
       contents: read
       packages: write
     steps:
       - uses: actions/checkout@v4
 
+      - name: Download Linux binary
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: runtime
+
+      - name: Stage binary for runtime build
+        shell: bash
+        run: |
+          mkdir -p dist
+          mv "runtime/${{ matrix.binary }}" "dist/${{ matrix.binary }}"
+          rm -rf runtime
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Prepare cache settings
+        id: cache
+        shell: bash
+        run: |
+          {
+            echo "cache_from=type=gha"
+            echo "cache_from_extra=type=registry,ref=ghcr.io/${{ github.repository_owner }}/yt-sprint-tool:buildcache"
+            echo "cache_to=type=gha,mode=max"
+            echo "cache_to_extra=type=registry,ref=ghcr.io/${{ github.repository_owner }}/yt-sprint-tool:buildcache,mode=max"
+          } >>"$GITHUB_OUTPUT"
+
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/yt-sprint-tool
+          tags: |
+            type=ref,event=branch
+            type=ref,event=tag
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
+          flavor: |
+            suffix=-${{ matrix.arch }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+
+      - name: Login to GHCR with GITHUB_TOKEN
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push (${{ matrix.platform }})
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          push: true
+          platforms: ${{ matrix.platform }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: |
+            ${{ steps.cache.outputs.cache_from }}
+            ${{ steps.cache.outputs.cache_from_extra }}
+          cache-to: |
+            ${{ steps.cache.outputs.cache_to }}
+            ${{ steps.cache.outputs.cache_to_extra }}
+
+  docker-manifest:
+    name: Docker Manifest
+    needs: docker-build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+    steps:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -178,47 +281,84 @@ jobs:
             type=ref,event=branch
             type=ref,event=tag
             type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
-          labels: |
-            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
 
-      - name: Build and push
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: true
-          platforms: linux/amd64,linux/arm64
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+      - name: Create multi-arch manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          while IFS= read -r tag; do
+            [[ -z "$tag" ]] && continue
+            docker buildx imagetools create \
+              --tag "$tag" \
+              "${tag}-amd64" \
+              "${tag}-arm64"
+          done <<< "${{ steps.meta.outputs.tags }}"
+
+      - name: Inspect manifest
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          while IFS= read -r tag; do
+            [[ -z "$tag" ]] && continue
+            docker buildx imagetools inspect "$tag"
+          done <<< "${{ steps.meta.outputs.tags }}"
 
   release:
     name: Release (attach artifacts)
-    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-24.04
-    needs: [linux, windows-amd64, macos, docker-image]
+    needs: [linux, windows, macos, docker-manifest]
     steps:
-      - name: Download artifacts
+      - name: Download linux-amd64
         uses: actions/download-artifact@v4
         with:
+          name: binaries-linux-amd64
           path: release
-          merge-multiple: true
+
+      - name: Download linux-arm64
+        uses: actions/download-artifact@v4
+        with:
+          name: binaries-linux-arm64
+          path: release
+
+      - name: Download windows-x64
+        uses: actions/download-artifact@v4
+        with:
+          name: binaries-windows-x64
+          path: release
+
+      - name: Download windows-x86
+        uses: actions/download-artifact@v4
+        with:
+          name: binaries-windows-x86
+          path: release
+
+      - name: Download macos-arm64
+        uses: actions/download-artifact@v4
+        with:
+          name: binaries-macos-arm64
+          path: release
+
+      - name: Download macos-x86_64
+        uses: actions/download-artifact@v4
+        with:
+          name: binaries-macos-x86_64
+          path: release
 
       - name: List artifacts
         run: |
-          ls -la release
+          ls -R release
 
       - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            release/make-sprint-linux-amd64
-            release/default-sprint-linux-amd64
-            release/make-sprint-linux-arm64
-            release/default-sprint-linux-arm64
-            release/make-sprint-windows-amd64.exe
-            release/default-sprint-windows-amd64.exe
-            release/make-sprint-macos-arm64
-            release/default-sprint-macos-arm64
-            release/make-sprint-macos-x86_64
-            release/default-sprint-macos-x86_64
+            release/ytsprint-linux-amd64
+            release/ytsprint-linux-arm64
+            release/ytsprint-windows-x64.exe
+            release/ytsprint-windows-x86.exe
+            release/ytsprint-macos-arm64
+            release/ytsprint-macos-x86_64
           draft: false
           prerelease: false

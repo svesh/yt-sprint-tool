@@ -28,7 +28,7 @@ from __future__ import annotations
 import datetime as dt
 import logging
 import time
-from typing import Any, Callable, Dict, Optional, Tuple
+from typing import Any, Callable, Dict, Optional, Tuple, cast
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
@@ -54,7 +54,7 @@ class DaemonRunner:
         self.metrics_port = int(metrics_port)
 
     @staticmethod
-    def _init_metrics(gauge_cls: Any) -> Tuple[Any, Dict[str, Optional[float]]]:
+    def _init_metrics(gauge_cls: type[Gauge]) -> Tuple[Gauge, Dict[str, Optional[float]]]:
         """
         Initialize Prometheus gauges and shared state.
 
@@ -84,9 +84,9 @@ class DaemonRunner:
             timezone=dt.timezone.utc,
             job_defaults={"coalesce": False, "misfire_grace_time": 30},
         )
-        trigger = CronTrigger.from_crontab(self.cron, timezone=dt.timezone.utc)
-        scheduler.add_job(job_func, trigger=trigger, next_run_time=dt.datetime.now(dt.timezone.utc))
-        scheduler.start()
+        trigger = cast(Any, CronTrigger).from_crontab(self.cron, timezone=dt.timezone.utc)
+        cast(Any, scheduler).add_job(job_func, trigger=trigger, next_run_time=dt.datetime.now(dt.timezone.utc))
+        cast(Any, scheduler).start()
         return scheduler
 
     def start(self, job_func: Callable[[], None]) -> None:
@@ -113,8 +113,8 @@ class DaemonRunner:
                 state["last_status"] = 0.0
                 logger.exception("Cron job failed: %s", job_exc)
             finally:
-                val = 0.0 if state["last_status"] is None else float(state["last_status"])  # type: ignore[arg-type]
-                status_gauge.set(val)
+                last_status = state["last_status"]
+                status_gauge.set(0.0 if last_status is None else float(last_status))
 
         scheduler = self._build_scheduler(_job_wrapper)
         logger.info("Cron schedule (UTC): %s", self.cron)
@@ -123,4 +123,4 @@ class DaemonRunner:
                 time.sleep(1)
         except KeyboardInterrupt:
             logger.info("Stopping daemon...")
-            scheduler.shutdown(wait=True)  # type: ignore[attr-defined]
+            cast(Any, scheduler).shutdown(wait=True)

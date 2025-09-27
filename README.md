@@ -12,16 +12,22 @@
 
 Set of utilities for automating sprint management in YouTrack.
 
-## Description
+Helpful references:
 
-Two CLI utilities help manage weekly sprints in YouTrack with ISO calendar semantics:
+- See CHANGELOG: [CHANGELOG.md](CHANGELOG.md)
+- Agent rules: [AGENTS.md](AGENTS.md)
+- macOS notes: [OSX_BUILD.md](OSX_BUILD.md)
 
-- `make-sprint`: creates a sprint on a YouTrack Agile board for a given ISO week.
-  The sprint name format is `YYYY.WW Sprint` (e.g., `2025.32 Sprint`).
-  Dates span Monday–Friday (UTC), covering the full work week in milliseconds.
-- `default-sprint`: synchronizes a project’s sprint field default (by default, `Sprints`)
-  with the sprint of the requested week by resolving the value from the field’s bundle
-  and applying it as the default.
+## Overview
+
+The unified `ytsprint` CLI manages ISO-week sprints in YouTrack and exposes two
+execution modes:
+
+- **Sync** (`--sync`, default) – ensures the sprint for the requested week
+  exists on the board, updates the project default field, can provision future
+  weeks, and supports cron-driven daemon execution.
+- **Create** (`--create`) – guarantees that the `YYYY.WW Sprint` exists on the
+  board without modifying project settings.
 
 ### Features
 
@@ -38,10 +44,15 @@ Two CLI utilities help manage weekly sprints in YouTrack with ISO calendar seman
 - YouTrack REST API token
 - Access to YouTrack server
 
-## Download and Use
+## User Guide
 
-- Preferred: download binaries from Releases: <https://github.com/svesh/yt-sprint-tool/releases>
-- Alternative (development): build locally — see the Development section.
+### Download
+
+- Recommended: download binaries from the latest release:
+  <https://github.com/svesh/yt-sprint-tool/releases/latest>
+  Typical assets: `ytsprint-linux-amd64`, `ytsprint-linux-arm64`,
+  `ytsprint-windows-x64.exe`, `ytsprint-windows-x86.exe`, `ytsprint-macos-<arch>`.
+- For development, build locally — see the Developer Guide.
 
 ### Usage
 
@@ -52,77 +63,68 @@ export YOUTRACK_URL="https://youtrack.example.com"
 export YOUTRACK_TOKEN="perm:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 ```
 
-### make-sprint Utility
-
-Create sprint for specified week on Agile board.
+### CLI Examples
 
 ```bash
-# Create sprint for current week
-make-sprint "My Board"
+# Create a sprint for the current week (create mode)
+ytsprint --create --board "My Board"
 
-# Create sprint for specific week
-make-sprint "My Board" "2025.32"
-```
+# Create a sprint for a specific week
+ytsprint --create --board "My Board" --week "2025.32"
 
-### default-sprint Utility
+# Synchronize project defaults (sync mode)
+ytsprint --board "My Board" --project "My Project"
 
-Synchronize sprint values between board and project.
+# Sync with a custom field and ensure two future weeks
+ytsprint --board "My Board" --project "My Project" --field "Custom Field" --forward 2
 
-```bash
-# Sync with default "Sprints" field
-default-sprint "My Board" "My Project"
+# Sync for a specific week
+ytsprint --board "My Board" --project "My Project" --week "2025.32"
 
-# Sync with custom field
-default-sprint "My Board" "My Project" --field "Custom Field"
+# Ensure future weeks while syncing
+ytsprint --board "My Board" --project "My Project" --forward 2
 
-# For specific week
-default-sprint "My Board" "My Project" --week "2025.32"
-
-# Ensure future sprints (create next N weeks)
-default-sprint "My Board" "My Project" --forward 2
-
-# Run as a daemon (UTC) every Monday 08:00, with Prometheus metrics
-default-sprint "My Board" "My Project" \
+# Run as a daemon with Prometheus metrics
+ytsprint --board "My Board" --project "My Project" \
   --daemon \
   --cron "0 8 * * 1" \
   --metrics-addr 0.0.0.0 \
   --metrics-port 9108
 ```
 
-## Parameters
+### Parameters
 
-### Common Parameters
+### Common options
 
-- `--url` - YouTrack server URL (or env `YOUTRACK_URL`)
-- `--token` - Bearer token for API (or env `YOUTRACK_TOKEN`)
+- `--board` – Agile board name (or env `YOUTRACK_BOARD`)
+- `--week` – ISO week in `YYYY.WW` format (defaults to the current week)
+- `--url` – YouTrack URL (or env `YOUTRACK_URL`)
+- `--token` – YouTrack REST token (or env `YOUTRACK_TOKEN`)
+- `--log-level` – logging verbosity (or env `YTSPRINT_LOG_LEVEL`, default `INFO`)
 
-### make_sprint.py Parameters
+### `--create` mode
 
-- `board` - Agile board name (positional argument)
-- `week` - Week in YYYY.WW format (optional positional argument)
-- `--log-level` - Logging level (`DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`). If omitted, uses env `YTSPRINT_LOG_LEVEL`; default `INFO`.
+- Uses only board, week, URL, token, and log level options
+- Mutually exclusive with `--daemon`
 
-### default_sprint.py Parameters
+### `--sync` mode
 
-- `board` - Agile board name (positional argument)
-- `project` - Project name (positional argument)
-- `--field` - Project field name (default "Sprints")
-- `--week` - Week in YYYY.WW format (default - current)
-- `--forward` - How many future sprints to ensure exist (default: 0). Default value is always switched to the current sprint.
-- `--daemon` - Run as background daemon with cron schedule (UTC)
-- `--cron` - Crontab string for schedule (default: `0 8 * * 1`)
-- `--metrics-addr` - Prometheus exporter bind address (default: `0.0.0.0`)
-- `--metrics-port` - Prometheus exporter port (default: `9108`)
-- `--log-level` - Logging level (`DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`). If omitted, uses env `YTSPRINT_LOG_LEVEL`; default `INFO`.
+- `--project` – project name (or env `YOUTRACK_PROJECT`)
+- `--field` – project field name (default `Sprints`)
+- `--forward` – number of future sprints to create/ensure (or env `YTSPRINT_FORWARD`)
+- `--daemon` – run continuously on a cron schedule
+- `--cron` – cron expression (or env `YTSPRINT_CRON`, default `0 8 * * 1`)
+- `--metrics-addr`, `--metrics-port` – Prometheus exporter binding
 
 Prometheus metrics exposed at `http://<metrics-addr>:<metrics-port>/metrics`:
 
 - `ytsprint_cron_seconds`: seconds since last cron run (NaN until first run)
 - `ytsprint_cron_status`: last run status (`1` on success, `0` on failure)
 
-## Docker Runtime Image
+### Docker Runtime Image
 
-Multi-architecture images (linux/amd64 and linux/arm64) are published to GitHub Container Registry at `ghcr.io/<owner>/yt-sprint-tool`.
+Multi-architecture images (linux/amd64 and linux/arm64) are published to GitHub Container Registry at `ghcr.io/svesh/yt-sprint-tool`.
+Browse tags and metadata: <https://github.com/users/svesh/packages/container/package/yt-sprint-tool>
 
 Environment variables recognised by the runtime image:
 
@@ -134,28 +136,28 @@ Environment variables recognised by the runtime image:
 - `YTSPRINT_FORWARD` – number of future sprints to ensure (default inside the container: `1`)
 - `YTSPRINT_LOG_LEVEL` – logging verbosity (`INFO`, `DEBUG`, etc.; default: `INFO`)
 
-The container entrypoint is the `default-sprint` binary.
-By default it runs daemon mode using environment-provided settings.
-Pass the board and project as additional arguments or override options as needed:
+The container entrypoint is the `ytsprint` binary.
+By default it runs sync mode in daemon configuration using environment-provided settings.
+Pass the board and project via options or override other parameters on launch:
 
 ```bash
 docker run --rm \
   -e YOUTRACK_URL="https://youtrack.example.com" \
   -e YOUTRACK_TOKEN="perm:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" \
-  ghcr.io/<owner>/yt-sprint-tool --daemon "My Board" "My Project"
+  ghcr.io/svesh/yt-sprint-tool --board "My Board" --project "My Project" --daemon
 ```
 
-Docker replaces the default command when explicit arguments are supplied,
-so the container depends on the built-in environment defaults for the cron schedule
-and forward count unless you override them.
-If you omit the positional `board` and `project`, set `YOUTRACK_BOARD` and `YOUTRACK_PROJECT`
-so the entrypoint can resolve them automatically.
+Docker replaces the default command when explicit arguments are supplied, so the
+container relies on environment defaults for the cron schedule and forward count
+unless you override them with explicit flags. If you omit `--board` and
+`--project`, set `YOUTRACK_BOARD` and `YOUTRACK_PROJECT` so the entrypoint can
+infer them automatically.
 
 Customise scheduling or log verbosity by overriding the corresponding environment variables (for example, `-e YTSPRINT_CRON="0 */2 * * 1-5"`).
 
-## Development
+## Developer Guide
 
-See AGENTS.md for contribution rules (patch-based edits; keep all checks green).
+See [AGENTS.md](AGENTS.md) for contribution rules (patch-based edits; keep all checks green).
 
 ### Dependencies
 
@@ -169,6 +171,12 @@ See AGENTS.md for contribution rules (patch-based edits; keep all checks green).
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
+# Install in editable mode for development
+pip install -e .
+# Linux only: install patchelf and staticx toolchain
+sudo apt-get update && sudo apt-get install -y patchelf
+pip install "scons>=4.7"
+pip install --no-build-isolation staticx==0.14.1
 ```
 
 ### Run All Checks
@@ -179,53 +187,85 @@ bash scripts/linters.sh
 
 ### Local Build
 
-Preferred: Docker wrapper (stable, reproducible)
+#### Linux (native)
 
 ```bash
-bash scripts/build-with-docker.sh            # all
-bash scripts/build-with-docker.sh linux-amd64
-bash scripts/build-with-docker.sh linux-arm64
-bash scripts/build-with-docker.sh windows-amd64
-bash scripts/build-with-docker.sh runtime     # load runtime container image for local debugging
+# Builds dist/ytsprint-linux-<arch>
+bash scripts/linux-build.sh
 ```
 
-Native (for development):
+#### Linux (Docker)
 
 ```bash
-# Linux (static)
-bash scripts/linux-install-deps.sh
-bash scripts/linux-build.sh
+bash scripts/build-linux-docker.sh            # amd64 + arm64 sequentially
+bash scripts/build-linux-docker.sh --arch amd64
+bash scripts/build-linux-docker.sh --arch arm64
+```
 
-# Windows (Wine on Linux)
-bash scripts/wine-install-deps.sh
-bash scripts/wine-build.sh
+#### Runtime Container
 
-# macOS (native on host arch)
-bash scripts/macos-build.sh
+```bash
+# Requires binaries in ./dist (see Linux build steps)
+bash scripts/build-runtime.sh                  # host architecture (amd64 or arm64)
+bash scripts/build-runtime.sh --arch amd64     # build linux/amd64 image
+bash scripts/build-runtime.sh --arch arm64     # build linux/arm64 image
+bash scripts/build-runtime.sh --multi          # create dist/ytsprint-runtime-multi.oci (amd64+arm64)
+# Import the multi-arch archive into your registry (example):
+# docker buildx imagetools create --tag ghcr.io/svesh/yt-sprint-tool:local \
+#   oci-archive:dist/ytsprint-runtime-multi.oci
+```
+
+#### Windows (native PowerShell)
+
+```powershell
+pwsh -File scripts/windows-build.ps1          # emits dist/ytsprint-windows-x64.exe or -x86.exe (matches Python bitness)
+# Note: the architecture of the output equals the architecture of the active Python
+# (64-bit Python -> x64 exe; 32-bit Python -> x86 exe).
+```
+
+#### macOS (native)
+
+```bash
+bash scripts/macos-build.sh                    # emits dist/ytsprint-macos-<arch> (arch = host, e.g., arm64 on Apple Silicon)
 ```
 
 On macOS, see local Docker setup and notes in [OSX_BUILD.md](OSX_BUILD.md).
 
-### Package Structure
+### Architecture and Modules
 
-- `ytsprint/lib_date_utils.py` — utilities for ISO weeks
-- `ytsprint/lib_yt_api.py` — YouTrack REST API client
-- `ytsprint/lib_sprint.py` — sprint service (ensure/create, defaults, forward, one‑off sync)
-- `ytsprint/lib_daemon.py` — daemon runner (cron, Prometheus metrics)
-- `ytsprint/make_sprint.py` — CLI entry (make‑sprint)
-- `ytsprint/default_sprint.py` — CLI entry (default‑sprint)
+- `ytsprint/cli.py` — unified CLI entry point; parses args for `--sync` and `--create`, routes to services.
+- `ytsprint/lib_sprint.py` — sprint service: ISO week calculation, board/project interactions, forward sprint provisioning.
+- `ytsprint/lib_yt_api.py` — typed wrapper over YouTrack REST API (boards, projects, sprints, bundles), with helpers for default fields.
+- `ytsprint/lib_date_utils.py` — ISO week/date utilities (parse/format `YYYY.WW`, date ranges, current week).
+- `ytsprint/lib_daemon.py` — APScheduler-based cron runner with Prometheus metrics exporter (seconds/status gauges).
 
-### Using Binaries (from dist/)
+### Distribution Artifacts (dist/)
 
-```bash
-# Linux
-./dist/make-sprint-linux "My Board" "2025.32"
-./dist/default-sprint-linux "My Board" "My Project" --field "Sprints"
+File name templates placed into `dist/` after builds:
+- Linux: `ytsprint-linux-amd64`, `ytsprint-linux-arm64`
+- Windows: `ytsprint-windows-x64.exe`, `ytsprint-windows-x86.exe`
+- macOS: `ytsprint-macos-<arch>` (e.g., `arm64` or `x86_64`)
 
-# Windows
-./dist/make-sprint-windows-amd64.exe "My Board" "2025.32"
-./dist/default-sprint-windows-amd64.exe "My Board" "My Project" --field "Sprints"
-```
+### Script Reference
+
+- `scripts/linux-build.sh` — builds Linux binary via PyInstaller + staticx using the active Python environment.
+- `scripts/build-linux-docker.sh` — builds Linux binaries via Docker (`Dockerfile.build`).
+- `scripts/build-runtime.sh` — assembles the runtime container image (single architecture or multi-arch OCI archive).
+- `scripts/windows-build.ps1` — builds Windows executable (auto-detects Python architecture).
+- `scripts/macos-build.sh` — builds macOS artifact on the host architecture.
+- `scripts/linters.sh` — runs linting and test suites.
+
+#### Internal Scripts
+
+- `scripts/internal/prepare-linux-deps.sh` — installs system packages for Linux builds (used in CI and Docker builder stages).
+
+### Linters and Rules
+
+- Aggregate command: `scripts/linters.sh` runs pylint, pyright, isort (check), markdown lint, yamllint, and pytest with coverage.
+- Configurations:
+  - Pylint/Pyright/pytest: [pyproject.toml](pyproject.toml)
+  - Markdown: [.pymarkdownlnt.json](.pymarkdownlnt.json)
+  - YAML: [.yamllint.yaml](.yamllint.yaml)
 
 ## Authors and Contributors
 
