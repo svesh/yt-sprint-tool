@@ -28,6 +28,7 @@ import pytest
 
 from ytsprint.lib_date_utils import DateUtils
 from ytsprint.lib_sprint import SprintService
+from ytsprint.lib_yt_api import YouTrackAPI
 
 
 class BundleValue(TypedDict):
@@ -286,3 +287,65 @@ def test_run_once_forward_year_boundaries(week_spec: str, expected_weeks: Sequen
 
     expected_default_id = f"val-{expected_weeks[0]['year']}-{expected_weeks[0]['week']:02d}"
     api.update_field_default_values.assert_called_once_with("proj-1", "field-1", [expected_default_id])
+
+
+def test_update_field_default_values_idempotent_noop(monkeypatch: pytest.MonkeyPatch) -> None:
+    """When current defaults equal desired, API performs no changes."""
+
+    api = YouTrackAPI(base_url="https://example", token="t")
+
+    # Mock underlying HTTP calls
+    get_mock = MagicMock(return_value=[{"id": "val-2025-30"}])
+    delete_mock = MagicMock()
+    post_mock = MagicMock()
+
+    monkeypatch.setattr(api, "get", get_mock)
+    monkeypatch.setattr(api, "delete", delete_mock)
+    monkeypatch.setattr(api, "post", post_mock)
+
+    api.update_field_default_values("proj", "field", ["val-2025-30"])
+
+    delete_mock.assert_not_called()
+    post_mock.assert_not_called()
+
+
+def test_update_field_default_values_remove_only_incorrect(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Removes only values not in desired set and keeps the correct one."""
+
+    api = YouTrackAPI(base_url="https://example", token="t")
+
+    # Current defaults contain both correct and incorrect
+    get_mock = MagicMock(return_value=[{"id": "val-2025-30"}, {"id": "val-OLD"}])
+    delete_mock = MagicMock(return_value=204)
+    post_mock = MagicMock()
+
+    monkeypatch.setattr(api, "get", get_mock)
+    monkeypatch.setattr(api, "delete", delete_mock)
+    monkeypatch.setattr(api, "post", post_mock)
+
+    api.update_field_default_values("proj", "field", ["val-2025-30"])
+
+    # Only the incorrect one removed; nothing added
+    delete_calls = [call.args[0] for call in delete_mock.call_args_list]
+    assert any("val-OLD" in url for url in delete_calls)
+    assert not any("val-2025-30" in url for url in delete_calls)
+    post_mock.assert_not_called()
+
+
+def test_update_field_default_values_add_missing(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Adds missing desired default when none are set currently."""
+
+    api = YouTrackAPI(base_url="https://example", token="t")
+
+    get_mock = MagicMock(return_value=[])
+    delete_mock = MagicMock()
+    post_mock = MagicMock()
+
+    monkeypatch.setattr(api, "get", get_mock)
+    monkeypatch.setattr(api, "delete", delete_mock)
+    monkeypatch.setattr(api, "post", post_mock)
+
+    api.update_field_default_values("proj", "field", ["val-2025-30"])
+
+    delete_mock.assert_not_called()
+    post_mock.assert_called_once()

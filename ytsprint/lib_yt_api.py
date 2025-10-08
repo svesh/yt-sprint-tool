@@ -196,35 +196,46 @@ class YouTrackAPI:
 
     def update_field_default_values(self, project_id: str, field_id: str, value_ids: List[str]) -> None:
         """
-        Updates default values for project field.
+        Update default values for the project field idempotently.
+
+        - If current defaults already match the desired set, do nothing.
+        - Remove only defaults that are not desired anymore.
+        - Add only defaults that are missing.
 
         Args:
             project_id (str): Project ID.
             field_id (str): Field ID.
-            value_ids (list): List of value IDs to set as default.
+            value_ids (list): List of value IDs that must remain as defaults.
         """
         defaults_path = f"/api/admin/projects/{project_id}/customFields/{field_id}/defaultValues"
 
         logger.info("Fetching current default values: project=%s field=%s", project_id, field_id)
         defaults = self.get(defaults_path, params={"fields": "id", "$top": 1000})
-        logger.info("Found %d default value(s) to remove", len(defaults))
 
-        for default in defaults:
-            default_id = default.get("id")
-            if not default_id:
-                logger.warning("Skip default without id: %s", default)
-                continue
-            logger.info("Deleting default value: id=%s", default_id)
-            status = self.delete(f"{defaults_path}/{default_id}")
-            if status == 404:
-                logger.info("Default value already absent: id=%s", default_id)
-            else:
-                logger.info("Default value removed: id=%s status=%s", default_id, status)
+        current_ids = {d.get("id") for d in defaults if d.get("id")}
+        desired_ids = set(value_ids)
 
-        logger.info("Setting new default value(s): %s", ",".join(value_ids))
-        for value_id in value_ids:
-            logger.info("Adding default value id=%s", value_id)
-            self.post(defaults_path, {"id": value_id, "$type": "VersionBundleElement"})
+        to_remove = current_ids - desired_ids
+        to_add = desired_ids - current_ids
+
+        if not to_remove and not to_add:
+            logger.info("Defaults already up-to-date; no changes needed")
+            return
+
+        if to_remove:
+            logger.info("Removing %d default value(s): %s", len(to_remove), ",".join(sorted(to_remove)))
+            for default_id in sorted(to_remove):
+                status = self.delete(f"{defaults_path}/{default_id}")
+                if status == 404:
+                    logger.info("Default value already absent: id=%s", default_id)
+                else:
+                    logger.info("Default value removed: id=%s status=%s", default_id, status)
+
+        if to_add:
+            logger.info("Adding %d default value(s): %s", len(to_add), ",".join(sorted(to_add)))
+            for value_id in sorted(to_add):
+                self.post(defaults_path, {"id": value_id, "$type": "VersionBundleElement"})
+
         logger.info("Default values update completed: project=%s field=%s", project_id, field_id)
 
     def get_field_defaults(self, project_id: str, field_id: str) -> Any:
