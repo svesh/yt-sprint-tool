@@ -13,7 +13,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Idempotent default sprint update: when switching a project's sprint field default, the tool removes only incorrect default values and adds only missing ones. If the current defaults already match the desired sprint, no changes are performed.
+- Idempotent default sprint update: when switching a project's sprint field default, the tool removes only incorrect
+  default values and adds only missing ones. If the current defaults already match the desired sprint, no changes are
+  performed.
 
 ## [2.1.0] - 2025-09-27
 
