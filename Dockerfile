@@ -9,6 +9,7 @@ RUN apt-get update \
         libc6 \
         libgcc-s1 \
         libstdc++6 \
+        ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
 RUN useradd -m appuser

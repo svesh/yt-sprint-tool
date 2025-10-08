@@ -5,6 +5,16 @@ All notable changes to YT Sprint Tool will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.1] - 2025-10-08
+
+### Fixed
+
+- Docker runtime image now installs `ca-certificates` on Ubuntu 24.04, restoring TLS trust store at `/etc/ssl/certs/ca-certificates.crt` to fix HTTPS requests from `requests`.
+
+### Changed
+
+- Idempotent default sprint update: when switching a project's sprint field default, the tool removes only incorrect default values and adds only missing ones. If the current defaults already match the desired sprint, no changes are performed.
+
 ## [2.1.0] - 2025-09-27
 
 ### Added
